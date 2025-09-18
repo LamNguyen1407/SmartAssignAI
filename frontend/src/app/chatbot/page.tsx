@@ -10,7 +10,7 @@ export default function ProfilePage() {
         const values = form.getFieldsValue();
         const formData = new FormData();
         formData.append('file', values.file[0].originFileObj);
-        const res = await axios.post("http://localhost:3001/upload", formData);
+        const res = await axios.post("http://localhost:3001/test", formData);
         console.log("res ", res);
     }
 
