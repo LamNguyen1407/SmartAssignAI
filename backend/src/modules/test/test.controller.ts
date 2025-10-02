@@ -20,20 +20,29 @@ export class TestController {
             console.log('api embed called');
             const embeddings = await this.testService.embeddings(chunks);
             console.log('api embed finished');
-            let results = [];
-            embeddings.map(async (embedding, index) => {
-                await this.testService.create({
+            // let results = [];
+            // embeddings.map(async (embedding, index) => {
+            //     await this.testService.create({
+            //         chunks: index,
+            //         embedding: embedding,
+            //         text: chunks[index],
+            //     });
+            //     results.push({
+            //         chunks: index,
+            //         embedding: embedding,
+            //         text: chunks[index],
+            //     });
+            // })
+            const results = await Promise.all(embeddings.map(async (embedding, index) => {
+                return await this.testService.create({
                     chunks: index,
                     embedding: embedding,
                     text: chunks[index],
                 });
-                results.push({
-                    chunks: index,
-                    embedding: embedding,
-                    text: chunks[index],
-                });
-            })
-            return { message: 'File uploaded successfully' };
+            }))
+                    
+            
+            return { message: 'File uploaded successfully', data: results };
         } catch (error) {
             return { message: 'File upload failed', error: error.message };
         }
@@ -65,6 +74,5 @@ export class TestController {
         } catch (error) {
             return { message: 'failed', error: error.message };
         }
-
     }
 }

@@ -3,8 +3,9 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Metadata, MetadataDocument } from 'src/schemas/metadata.schema';
+import { Metadata, MetadataDocument } from 'src/model/schemas/metadata.schema';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { CreateMetadataDto } from 'src/model/dtos/metadata/metada.dto';
 
 @Injectable()
 export class TestService {
@@ -21,7 +22,11 @@ export class TestService {
         return result.response.text();
     }
 
-    async create(obj: { chunks: number; embedding: number[]; text: string }) {
+    // async create(obj: { chunks: number; embedding: number[]; text: string }) {
+    //     const newMetadata = new this.metadataModel(obj);
+    //     return newMetadata.save();
+    // }
+    async create(obj: CreateMetadataDto) {
         const newMetadata = new this.metadataModel(obj);
         return newMetadata.save();
     }
