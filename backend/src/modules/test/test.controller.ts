@@ -4,6 +4,7 @@ import { Body, Controller, Get, Post, UploadedFile, UseInterceptors } from '@nes
 import { FileInterceptor } from '@nestjs/platform-express';
 import { readPDF, splitText } from 'src/utils/utils';
 import { TestService } from './test.service';
+import { CreateQuestionDto } from 'src/model/dtos/chat/createQuestion.dto';
 
 @Controller('test')
 export class TestController {
@@ -20,20 +21,29 @@ export class TestController {
             console.log('api embed called');
             const embeddings = await this.testService.embeddings(chunks);
             console.log('api embed finished');
-            let results = [];
-            embeddings.map(async (embedding, index) => {
-                await this.testService.create({
+            // let results = [];
+            // embeddings.map(async (embedding, index) => {
+            //     await this.testService.create({a
+            //         chunks: index,
+            //         embedding: embedding,
+            //         text: chunks[index],
+            //     });
+            //     results.push({
+            //         chunks: index,
+            //         embedding: embedding,
+            //         text: chunks[index],
+            //     });
+            // })
+            const results = await Promise.all(embeddings.map(async (embedding, index) => {
+                return await this.testService.create({
                     chunks: index,
                     embedding: embedding,
                     text: chunks[index],
                 });
-                results.push({
-                    chunks: index,
-                    embedding: embedding,
-                    text: chunks[index],
-                });
-            })
-            return { message: 'File uploaded successfully' };
+            }))
+                    
+            
+            return { message: 'File uploaded successfully', data: results };
         } catch (error) {
             return { message: 'File upload failed', error: error.message };
         }
@@ -42,29 +52,53 @@ export class TestController {
 
     @Post('/question')
     async getAnswer(
-        @Body() body: { question: string }
+        @Body() createQuestion: CreateQuestionDto
     ) {
         try {
-            const embeddings = await this.testService.embeddings([body.question]);
+            const embeddings = await this.testService.embeddings([createQuestion.question]);
+            // console.log(embeddings);
             const vectors = await this.testService.queryVector(embeddings[0], 5);
+            // console.log(vectors);
             const text = vectors.map(vector => vector.text).join(' ');
-            console.log(text);
+            // console.log(text);
+            // const prompt = `
+            //     Bạn là trợ lý AI hỗ trợ lập trình về bài tập lớn,
+            //     dưới đây là ngữ cảnh của đề bài.
+            //     Nếu không biết thì trả lời là "Tôi không rõ".
+            //     Ngữ cảnh: ${text}
+            //     Câu hỏi: ${body.question}
+            //     Trả lời:
+            // `;
             const prompt = `
-                Bạn là trợ lý AI hỗ trợ lập trình về bài tập lớn,
-                dưới đây là ngữ cảnh của đề bài.
-                Nếu không biết thì trả lời là "Tôi không rõ".
-                Ngữ cảnh: ${text}
-                Câu hỏi: ${body.question}
-                Trả lời:
-            `;
+                Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
+                Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
+                Hãy tuân theo quy tắc sau:
+
+                1. Nếu trong ngữ cảnh có thông tin liên quan, hãy trả lời đầy đủ, rõ ràng, và có cấu trúc (có thể dùng bullet points hoặc chia đoạn).
+                2. Nếu ngữ cảnh không đủ để trả lời, hãy trả lời chính xác: "Tôi không rõ."
+                3. Không tự bịa thêm thông tin ngoài ngữ cảnh.
+                4. Ưu tiên giải thích chi tiết, dễ hiểu, có ví dụ nếu phù hợp.
+
+                --- NGỮ CẢNH ---
+                ${text}
+
+                --- CÂU HỎI ---
+                ${createQuestion.question}
+
+                --- TRẢ LỜI ---
+                `;
+
             const answer = await this.testService.askAI(prompt);
             return {
                 message: 'success',
                 answer: answer
             };
         } catch (error) {
-            return { message: 'failed', error: error.message };
+            console.error('Full error:', error.response?.data || error);
+            return { 
+                message: 'failed', 
+                error: error.response?.data || error.message 
+            };
         }
-
     }
 }
