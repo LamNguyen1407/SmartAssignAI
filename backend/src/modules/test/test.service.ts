@@ -17,7 +17,7 @@ export class TestService {
     private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     async askAI(prompt: string) {
-        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         const result = await model.generateContent(prompt);
         return result.response.text();
     }
@@ -28,7 +28,7 @@ export class TestService {
     // }
     async create(obj: CreateMetadataDto) {
         const newMetadata = new this.metadataModel(obj);
-        return newMetadata.save();
+        return await newMetadata.save();
     }
 
     async queryVector(vector: number[], topK: number) {
