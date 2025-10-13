@@ -26,6 +26,11 @@ export class TestService {
     //     const newMetadata = new this.metadataModel(obj);
     //     return newMetadata.save();
     // }
+
+    async create_many(objs: { chunks: number; embedding: number[]; text: string }[]) {
+        return this.metadataModel.insertMany(objs);
+    }
+
     async create(obj: CreateMetadataDto) {
         const newMetadata = new this.metadataModel(obj);
         return await newMetadata.save();
@@ -47,7 +52,6 @@ export class TestService {
     }
 
     async embeddings(chunks: string[]) {
-        // const url = 'https://672d4c5fe586.ngrok-free.app/embed';
         const url = process.env.API_EMBEDDINGS;
 
         const response = await firstValueFrom(this.httpService.post(url, { texts: chunks }));

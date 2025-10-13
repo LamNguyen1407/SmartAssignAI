@@ -10,7 +10,8 @@ export default function ProfilePage() {
         const values = form.getFieldsValue();
         const formData = new FormData();
         formData.append('file', values.file[0].originFileObj);
-        const res = await axios.post("http://localhost:3001/test", formData);
+        // const res = await axios.post("http://localhost:3001/test", formData);
+        const res = await axios.post("http://localhost:3001/test/semantic-chunk", formData);
         console.log("res ", res);
     }
 
