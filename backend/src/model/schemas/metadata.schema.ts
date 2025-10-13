@@ -13,6 +13,9 @@ export class Metadata {
 
     @Prop({ required: true })
     text: string;
+
+    @Prop({ type: Map, of: String })
+    metadata: Map<string, string>;
 }
 
 export const MetadataSchema = SchemaFactory.createForClass(Metadata);
