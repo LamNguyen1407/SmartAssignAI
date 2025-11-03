@@ -43,7 +43,7 @@ export class TestService {
                     index: 'vector_index',
                     path: 'embedding',
                     queryVector: vector,
-                    numCandidates: 10,
+                    numCandidates: topK * 5,
                     limit: topK,
                 }
             }
