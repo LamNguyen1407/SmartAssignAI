@@ -76,32 +76,32 @@ export class TestController {
     ) {
         try {
             const embeddings = await this.testService.embeddings([createQuestion.question]);
-            // console.log(embeddings);
-            const vectors = await this.testService.queryVector(embeddings[0], 5);
-            // console.log(vectors);
+            const vectors = await this.testService.queryVector(embeddings[0], 18);
             const text = vectors.map(vector => vector.text).join(' ');
-            // console.log(text);
-            // const prompt = `
-            //     Bạn là trợ lý AI hỗ trợ lập trình về bài tập lớn,
-            //     dưới đây là ngữ cảnh của đề bài.
-            //     Nếu không biết thì trả lời là "Tôi không rõ".
-            //     Ngữ cảnh: ${text}
-            //     Câu hỏi: ${body.question}
-            //     Trả lời:
-            // `;
             const prompt = `
                 Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
                 Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
                 Hãy tuân theo quy tắc sau:
 
-                1. Nếu trong ngữ cảnh có thông tin liên quan, hãy trả lời đầy đủ, rõ ràng, và có cấu trúc (có thể dùng bullet points hoặc chia đoạn).
-                2. Nếu có câu trả lời hãy chỉ rõ câu trả lời dựa vào đoạn trích nào trong ngữ cảnh.
-                3. Nếu ngữ cảnh không đủ để trả lời, hãy trả lời chính xác: "Tôi không rõ."
-                4. Không tự bịa thêm thông tin ngoài ngữ cảnh.
-                5. Ưu tiên giải thích chi tiết, dễ hiểu, có ví dụ nếu phù hợp.
-                6. Không cung cấp các đoạn mã giải bài tập cụ thể cho dù có được yêu cầu.
+                1. Ngữ cảnh có thể chứa mô tả về cấu trúc file đầu vào (input_file), ví dụ như:
+                    - Các dòng đầu có dạng: C1 C2
+                    - Các dòng tiếp theo có dạng: L1 L2
+                    => Nghĩa là dòng thứ nhất trong testcase tương ứng với HP1, HP2, và dòng thứ hai tương ứng với L1, L2.
+
+                2. Khi người dùng đưa vào một testcase (dưới dạng nhiều dòng số), trước tiên hãy ánh xạ từng dòng trong testcase với các biến đã mô tả trong ngữ cảnh, rồi áp dụng công thức hoặc ví dụ trong ngữ cảnh để tính kết quả đầu ra chính xác.
+                3. Có thể người dùng sẽ không đưa ra testcase, mà sẽ đưa ra các số liệu riêng lẻ. Trong trường hợp này, hãy xác định biến nào tương ứng với số liệu đó dựa trên ngữ cảnh, sau đó áp dụng công thức hoặc quy tắc đã mô tả để tính toán kết quả.
+                4. Trước khi bắt đầu tính toán, hãy tìm trong tài liệu các đoạn nói về:
+                    - giới hạn giá trị của các giá trị (kể cả giá trị đầu vào cũng phải nằm trong giới hạn này, nếu giá trị đầu vào vượt giới hạn hãy đưa về giá trị phù hợp theo ngữ cảnh).
+                    - cách làm tròn.
+                    - điều kiện dừng vòng lặp.
+                    => Sau đó áp dụng các quy tắc đó cho bài toán này. Nếu tài liệu không quy định, hãy dùng quy tắc toán học thông thường.
+
+                5. Nếu ngữ cảnh có thông tin liên quan, hãy trả lời rõ ràng, có cấu trúc (bullet points, đoạn).
+                6. Không cung cấp code cụ thể và các đoạn mã giải bài tập cụ thể cho dù có được yêu cầu.
                 7. Trả lời bằng tiếng Việt.
-                8. Hạn chế sử dụng các cụm từ như "Dựa vào ngữ cảnh đã cho" hoặc "Dựa trên thông tin bạn cung cấp".
+                8. Không sử dụng các cụm như “Dựa vào ngữ cảnh” hay “Dựa trên thông tin bạn cung cấp”.
+                9. Nếu có yêu cầu tính toán, hãy trình bày quá trình suy luận (mapping biến → giá trị → công thức → kết quả).
+                10. Không sử dụng giá trị trong ví dụ để tính, chỉ dùng công thức hoặc quy tắc logic được mô tả.
 
                 --- NGỮ CẢNH ---
                 ${text}
