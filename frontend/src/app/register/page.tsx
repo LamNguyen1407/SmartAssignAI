@@ -1,10 +1,11 @@
 "use client"
 
-import { RegisterForm } from "@/components/auth/RegisterForm"
+import AuthForm, { AuthFormType } from "@/components/auth/AuthForm"
+import  RegisterForm  from "@/components/auth/RegisterForm"
 
 const RegisterPage = () => {
   return (
-    <RegisterForm />
+    <AuthForm children={<RegisterForm />} type={AuthFormType.REGISTER} />
   )
 }
 

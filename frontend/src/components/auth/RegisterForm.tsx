@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
 import { useMutation } from "@tanstack/react-query"
-import axios from "axios"
 import { useRef, useState } from "react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -14,16 +13,29 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { registerSchema, RegisterSchema } from "@/interface/registerForm.interface"
+import { RegisterUser } from "@/services/auth.service"
+import { useRouter } from "next/navigation"
 
-export function RegisterForm() {
+export default function RegisterForm() {
+
+  const router = useRouter();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
   // Mutation để gọi API đăng ký
-  const registerMutation = useMutation({
+  // const registerMutation = useMutation({
+  //   mutationFn: async (data: RegisterSchema) => {
+  //     const res = await axiosClient.post("/auth/register", data)
+  //     return res.data
+  //   },
+  // })
+
+  const {mutate: registerMutation, isPending: isRegisterPending} = useMutation({
     mutationFn: async (data: RegisterSchema) => {
-      const res = await axios.post("/api/auth/register", data)
-      return res.data
+      const res = await RegisterUser(data);
+      return res;
     },
+    onSuccess: () => { alert("🎉 Đăng ký thành công!"), router.push('/login') },
+    onError: (err: any) => { alert(err.response?.data?.message || "❌ Đăng ký thất bại") },
   })
 
 
@@ -38,10 +50,7 @@ export function RegisterForm() {
   })
 
   const onSubmit = (data: RegisterSchema) => {
-    registerMutation.mutate(data, {
-      onSuccess: () => alert("🎉 Đăng ký thành công!"),
-      onError: (err: any) => alert(err.response?.data?.message || "❌ Đăng ký thất bại"),
-    })
+    registerMutation(data);
   }
 
   const gender = watch("gender")
@@ -161,9 +170,9 @@ export function RegisterForm() {
           <Button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={registerMutation.isPending}
+            disabled={isRegisterPending}
           >
-            {registerMutation.isPending ? "Creating Account..." : "Create Account"}
+            {isRegisterPending ? "Creating Account..." : "Create Account"}
           </Button>
         </form>
       </CardContent>
