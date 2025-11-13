@@ -17,10 +17,10 @@ import { Home, FileText, MessageSquare, User, Sparkles, Menu, LogOut } from "luc
 import Link from "next/link"
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Files", href: "/dashboard/files", icon: FileText },
-  { name: "Chat", href: "/dashboard/chat", icon: MessageSquare },
-  { name: "Profile", href: "/dashboard/profile", icon: User },
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Files", href: "/files", icon: FileText },
+  { name: "Chat", href: "/chat", icon: MessageSquare },
+  { name: "Profile", href: "/profile", icon: User },
 ]
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -50,7 +50,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <SidebarMenu>
               {navigation.map((item) => {
                 const isActive =
-                  pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))
+                  pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
                 return (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton asChild>
