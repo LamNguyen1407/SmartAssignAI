@@ -92,7 +92,7 @@ export class TestController {
                 3. Có thể người dùng sẽ không đưa ra testcase, mà sẽ đưa ra các số liệu riêng lẻ. Trong trường hợp này, hãy xác định biến nào tương ứng với số liệu đó dựa trên ngữ cảnh, sau đó áp dụng công thức hoặc quy tắc đã mô tả để tính toán kết quả.
                 4. Trước khi bắt đầu tính toán, hãy tìm trong tài liệu các đoạn nói về:
                     - giới hạn giá trị của các giá trị (kể cả giá trị đầu vào cũng phải nằm trong giới hạn này, nếu giá trị đầu vào vượt giới hạn hãy đưa về giá trị phù hợp theo ngữ cảnh).
-                    - cách làm tròn.
+                    - cách làm tròn (khi nào nên làm tròn và khi nào không).
                     - điều kiện dừng vòng lặp.
                     => Sau đó áp dụng các quy tắc đó cho bài toán này. Nếu tài liệu không quy định, hãy dùng quy tắc toán học thông thường.
 
