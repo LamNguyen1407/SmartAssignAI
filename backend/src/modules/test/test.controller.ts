@@ -92,7 +92,7 @@ export class TestController {
                 3. Có thể người dùng sẽ không đưa ra testcase, mà sẽ đưa ra các số liệu riêng lẻ. Trong trường hợp này, hãy xác định biến nào tương ứng với số liệu đó dựa trên ngữ cảnh, sau đó áp dụng công thức hoặc quy tắc đã mô tả để tính toán kết quả.
                 4. Trước khi bắt đầu tính toán, hãy tìm trong tài liệu các đoạn nói về:
                     - giới hạn giá trị của các giá trị (kể cả giá trị đầu vào cũng phải nằm trong giới hạn này, nếu giá trị đầu vào vượt giới hạn hãy đưa về giá trị phù hợp theo ngữ cảnh).
-                    - cách làm tròn.
+                    - cách làm tròn. (không tự ý làm tròn các biến không được đề cập về quy định làm tròn)
                     - điều kiện dừng vòng lặp.
                     => Sau đó áp dụng các quy tắc đó cho bài toán này. Nếu tài liệu không quy định, hãy dùng quy tắc toán học thông thường.
 
@@ -101,7 +101,7 @@ export class TestController {
                 7. Trả lời bằng tiếng Việt.
                 8. Không sử dụng các cụm như “Dựa vào ngữ cảnh” hay “Dựa trên thông tin bạn cung cấp”.
                 9. Nếu có yêu cầu tính toán, hãy trình bày quá trình suy luận (mapping biến → giá trị → công thức → kết quả).
-                10. Không sử dụng giá trị trong ví dụ để tính, chỉ dùng công thức hoặc quy tắc logic được mô tả.
+                10. Tách câu trả lời theo bố cục: Câu trả lời – Giải thích – Kết luận
 
                 --- NGỮ CẢNH ---
                 ${text}
@@ -111,6 +111,32 @@ export class TestController {
 
                 --- TRẢ LỜI ---
                 `;
+
+            // const prompt = `
+            //     Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
+            //     Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
+            //     Hãy tuân theo quy tắc sau:
+
+            //     1. Nếu trong ngữ cảnh có thông tin liên quan, hãy trả lời đầy đủ, rõ ràng, và có cấu trúc (có thể dùng bullet points hoặc chia đoạn).
+            //     2. Nếu ngữ cảnh không đủ để trả lời, hãy trả lời chính xác: "Tôi không rõ."
+            //     3. Không tự bịa thêm thông tin ngoài ngữ cảnh.
+            //     4. Ưu tiên giải thích chi tiết, dễ hiểu, có ví dụ nếu phù hợp.
+            //     5. Nếu ngữ cảnh có thông tin liên quan, hãy trả lời rõ ràng, có cấu trúc (bullet points, đoạn).
+            //     6. Không cung cấp code cụ thể và các đoạn mã giải bài tập cụ thể cho dù có được yêu cầu.
+            //     7. Trả lời bằng tiếng Việt 
+            //     8. Không sử dụng các cụm như “Dựa vào ngữ cảnh” hay “Dựa trên thông tin bạn cung cấp”.
+            //     9. Nếu có yêu cầu tính toán, hãy trình bày quá trình suy luận (mapping biến → giá trị → công thức → kết quả).
+            //     10. Không sử dụng giá trị trong ví dụ để tính, chỉ dùng công thức hoặc quy tắc logic được mô tả.
+            //     11. Tách câu trả lời theo bố cục: Câu trả lời – Giải thích – Kết luận
+
+            //     --- NGỮ CẢNH ---
+            //     ${text}
+
+            //     --- CÂU HỎI ---
+            //     ${createQuestion.question}
+
+            //     --- TRẢ LỜI ---
+            //     `;
 
             const answer = await this.testService.askAI(prompt);
             return {
