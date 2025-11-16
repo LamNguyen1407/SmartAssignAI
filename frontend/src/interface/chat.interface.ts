@@ -16,4 +16,5 @@ export interface ChatSession {
   title: string
   lastMessage: string
   timestamp: Date
+
 }

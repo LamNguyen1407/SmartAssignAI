@@ -1,57 +1,40 @@
 import axios from "axios";
 
-
 const axiosClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
-    timeout: 100000,
-    headers: {
-        'Content-Type': 'application/json'
-    }
-})
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001",
+  timeout: 100000,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: true, //cho phép gửi cookie (quan trọng)
+});
 
-//tu dong gan access token vao header
-axiosClient.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-)
 
-//tu dong refresh token neu access token het han
+
+//Interceptor response để tự refresh nếu accessToken hết hạn
 axiosClient.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const originalRequest = error.config;
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
 
-        if(error.response?.status === 401 && !originalRequest._retry){
-            originalRequest._retry = true;
-            try{
-                const refreshToken = localStorage.getItem('refreshToken');
-                const res = await axiosClient.post('/auth/refresh', {token: refreshToken});
+    // Nếu accessToken hết hạn (401) và chưa retry
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        // Gọi endpoint refresh — cookie sẽ được tự gửi
+        await axiosClient.post("/auth/refresh");
 
-                const newAccessToken = res.data.accessToken;
-                localStorage.setItem('accessToken', newAccessToken);
-
-                // Gắn lại token mới vào header và retry request
-                axios.defaults.headers.common["Authorization"] = `Bearer ${newAccessToken}`;
-                return axiosClient(originalRequest);
-            }
-            catch(refreshError){
-                // Nếu refresh token hết hạn → logout
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("refreshToken");
-                window.location.href = "/login";
-            }
-        }
-
-        return Promise.reject(error);
+        // Backend nên set lại cookie mới ở response
+        // => không cần làm gì thêm ở FE, chỉ retry lại request
+        return axiosClient(originalRequest);
+      } catch (refreshError) {
+        // Nếu refresh token cũng hết hạn → logout
+        window.location.href = "/login";
+      }
     }
-)
+
+    return Promise.reject(error);
+  }
+);
 
 export default axiosClient;
