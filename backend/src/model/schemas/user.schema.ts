@@ -3,12 +3,12 @@ import { Document } from 'mongoose';
 
 
 export enum Gender {
-    MALE = 'male',
-    FEMALE = 'female',
-    OTHER = 'other'
+  MALE = 'male',
+  FEMALE = 'female',
+  OTHER = 'other'
 }
 
-@Schema({ timestamps: true }) 
+@Schema({ timestamps: true })
 export class User extends Document {
   @Prop({ required: true })
   name: string;
@@ -19,7 +19,7 @@ export class User extends Document {
   @Prop({ required: true })
   password: string;
 
-  @Prop({required: true, enum: ['male', 'female', 'other']})
+  @Prop({ required: true, enum: ['male', 'female', 'other'] })
   gender: Gender;
 
   @Prop({ required: true, unique: true, lowercase: true })
@@ -37,8 +37,8 @@ export class User extends Document {
   @Prop({ default: 'user', enum: ['user', 'admin'] })
   role: string;
 
-  @Prop({ default: true})
-  isActive: boolean; 
+  @Prop({ default: true })
+  isActive: boolean;
 
   @Prop({ default: false })
   isEmailVerified: boolean;
