@@ -1,10 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 
 export type MetadataDocument = Metadata & Document;
 
 @Schema()
 export class Metadata {
+    @Prop({ required: true })
+    indexMetadata: number;
+
+    @Prop({ required: true, type: mongoose.Types.ObjectId })
+    ChatSessionID: string;
+
     @Prop({ required: true })
     chunks: number;
 
