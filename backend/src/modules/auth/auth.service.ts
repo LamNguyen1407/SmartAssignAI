@@ -1,20 +1,26 @@
 import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { UserLoginDto } from 'src/model/dtos/user/userLogin.dto';
 import { UserSignUpDto } from 'src/model/dtos/user/userSignUp.dto';
 import { User} from 'src/model/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import {v4 as uuidv4} from 'uuid';
+import { nanoid } from 'nanoid';
 import { RefreshToken } from 'src/model/schemas/refreshToken.schema';
 import { RefreshTokenDto } from 'src/model/dtos/user/refreshToken.dto';
+import { ChangePasswordDto } from 'src/model/dtos/user/changePassword.dto';
+import { ResetToken } from 'src/model/schemas/resetToken.schema';
+import { EmailService } from '../email/email.service';
 @Injectable()
 export class AuthService {
     constructor(
         @InjectModel(User.name) private readonly userModel: Model<User>,
         @InjectModel(RefreshToken.name) private readonly refreshTokenModel: Model<RefreshToken>,
+        @InjectModel(ResetToken.name) private readonly resetTokenModel: Model<ResetToken>,
         private readonly jwtService: JwtService,
+        private readonly emailService: EmailService
 ) {}
 
     // async validateUser(userLoginDto: UserLoginDto): Promise<any> {
@@ -61,6 +67,7 @@ export class AuthService {
 
     async refreshTokens(refreshTokenDto: RefreshTokenDto) {
         const { token } = refreshTokenDto;
+        console.log('Refreshing token:', token);
         const storedToken = await this.refreshTokenModel.findOne({ token, expiresAt: { $gt: new Date()} });
         if (!storedToken) {
             throw new UnauthorizedException('Invalid refresh token');
@@ -82,4 +89,63 @@ export class AuthService {
         await this.refreshTokenModel.updateOne({userId} , {$set: {token, expiresAt}}, {upsert: true}); // Use upsert option to create a new document if it doesn't exist({token, userId, expiresAt})
     }
 
+    async logout(userId: string) {
+        await this.refreshTokenModel.deleteOne({userId: new Types.ObjectId(userId)});
+    }
+
+    async changePassword(userid: string, changePasswordDto: ChangePasswordDto){
+        const {oldPassword, newPassword} = changePasswordDto;
+        const user =  await this.userModel.findById(userid);
+        if(!user){
+            throw new UnauthorizedException('User not found');
+        }
+        const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+        if(!isOldPasswordValid){
+            throw new UnauthorizedException('Old password is incorrect');
+        }
+        const hashPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashPassword;
+        return await user.save();
+    }
+
+    async forgotPassword(email: string){
+        const user = await this.userModel.findOne({email});
+        if(!user){
+            throw new BadRequestException('Email not found');
+        }
+        const resetToken = nanoid(64);
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1); // Set expiration to 1 hour from now
+        await this.resetTokenModel.updateOne(
+            {userId: user._id},
+            {$set: {token: resetToken, expiresAt}},
+            {upsert: true}
+        );
+
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        //send mail with reset link (omitted for brevity)
+        await this.emailService.sendMail(
+            email,
+            'Password Reset Request',
+            `
+            <h2>Reset Your Password</h2>
+            <p>We received a request to reset your password.</p>
+            <p>Click below to reset it:</p>
+
+            <a href="${resetLink}" style="
+                display:inline-block;
+                padding:10px 20px;
+                background:#4f46e5;
+                color:white;
+                border-radius:6px;
+                text-decoration:none;
+            ">Reset Password</a>
+
+            <p>This link will expire in <b>1 hour</b>.</p>
+            <p>If you did not request this, ignore this email.</p>
+            `
+        );
+        return {message: 'Link reset password has been sent to your email'};
+
+    }
 }

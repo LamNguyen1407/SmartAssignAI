@@ -7,7 +7,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RefreshToken, RefreshTokenSchema } from 'src/model/schemas/refreshToken.schema';
 import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './strategy/jwt.strategy';
+import { JwtStrategy } from '../strategies/jwt.strategy';
+import { ResetToken, ResetTokenSchema } from 'src/model/schemas/resetToken.schema';
+import { EmailService } from '../email/email.service';
 
 
 @Module({
@@ -15,7 +17,8 @@ import { JwtStrategy } from './strategy/jwt.strategy';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     MongooseModule.forFeature([
       {name: User.name, schema: UserSchema},
-      {name: RefreshToken.name, schema: RefreshTokenSchema}
+      {name: RefreshToken.name, schema: RefreshTokenSchema},
+      {name: ResetToken.name, schema: ResetTokenSchema}
     
     ]),
     JwtModule.registerAsync({
@@ -30,6 +33,6 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 })
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, EmailService],
 })
 export class AuthModule {}
