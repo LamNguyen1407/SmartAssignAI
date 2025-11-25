@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { LoginUser } from "@/services/auth.service";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 export default function LoginForm() {
     const router = useRouter();
@@ -18,10 +19,10 @@ export default function LoginForm() {
         return await LoginUser(data);
         },
         onSuccess: () => {
-          alert("🎉 Đăng nhập thành công!"),
+          toast.success("🎉 Login successfully!"),
           router.push("/");
         },
-        onError: (err: any) => { alert(err.response?.data?.message || "❌ Đăng nhập thất bại") },
+        onError: (err: any) => { toast.error(err.response?.data?.message || "❌ Login failed") },
     })
 
 
@@ -32,7 +33,7 @@ export default function LoginForm() {
     
 
   const onSubmit = async (data: LoginSchema) => {
-    console.log("Submitting login form with data:", data);
+    // console.log("Submitting login form with data:", data);
     await loginMutation(data);
   };
 
@@ -70,7 +71,7 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={isLoginPending}
-            className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition"
+            className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition cursor-pointer"
           >
             Login
           </button>
