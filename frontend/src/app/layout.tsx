@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Suspense } from "react";
-import ReactQueryProvider from "../providers/ReactQueryProvider";
+import ClientAuthWrapper from "./AuthWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,16 +23,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Suspense fallback={<div>Loading...</div>}>
-          <ReactQueryProvider>
-              {children}
-          </ReactQueryProvider>
-        </Suspense>
+        <ClientAuthWrapper>{children}</ClientAuthWrapper>
       </body>
     </html>
   );

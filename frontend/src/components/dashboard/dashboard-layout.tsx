@@ -15,6 +15,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Home, FileText, MessageSquare, User, Sparkles, Menu, LogOut } from "lucide-react"
 import Link from "next/link"
+import { useMutation } from "@tanstack/react-query"
+import { toast } from "react-toastify"
+import { LogoutUser } from "@/services/auth.service"
+import { useRouter } from "next/navigation"
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
@@ -25,11 +29,18 @@ const navigation = [
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter();
 
-  const handleSignOut = () => {
-    // In a real app, this would handle authentication logout
-    window.location.href = "/"
-  }
+  const {mutate: LogoutMutation, isPending: isLogoutPending} = useMutation({
+    mutationFn: async () => {
+      await LogoutUser();
+      router.push("/login")
+    },
+    onSuccess: () => {
+      toast.success("Logout successfully")
+    },
+    onError: (err: any) => { toast.error(err.response?.data?.message || "Logout failed") },
+  })
 
   return (
     <SidebarProvider>
@@ -85,7 +96,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <div className="text-sm text-gray-600">
                   Welcome back, <span className="font-medium text-gray-900">John Doe</span>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <Button disabled={isLogoutPending} className="cursor-pointer" variant="outline" size="sm" onClick={() => LogoutMutation()}>
                   <LogOut className="h-4 w-4 mr-1" />
                   Sign Out
                 </Button>

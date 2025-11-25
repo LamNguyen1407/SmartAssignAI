@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 export function middleware(req: NextRequest) {
   const accessToken = req.cookies.get("accessToken")?.value || null;
 
-   const pathname = req.nextUrl.pathname;
+  const pathname = req.nextUrl.pathname;
 
   // Danh sách route cần bảo vệ
   const protectedRoutes = ["/files", "/chat", "/profile"];
@@ -13,11 +13,12 @@ export function middleware(req: NextRequest) {
   // Nếu người dùng đã đăng nhập và cố gắng truy cập trang công khai, chuyển hướng họ đến trang chính
   if (publicRoutes.some((path) => pathname.startsWith(path))) {
     if (accessToken) {
-      const homeUrl = new URL("/", req.url);
-      return NextResponse.redirect(homeUrl);
+      const url = new URL("/", req.url);
+      return NextResponse.redirect(url);
     }
   }
 
+  // Neu nguoi dung chua dang nhap, chuyen huong den trang login
   if (protectedRoutes.some((path) => pathname.startsWith(path)) || pathname === "/") {
     if (!accessToken) {
       const loginUrl = new URL("/login", req.url);
