@@ -7,13 +7,14 @@ import { Suspense } from "react";
 import ReactQueryProvider from "../providers/ReactQueryProvider";
 import { ToastContainer } from "react-toastify";
 import Loading from "@/components/loading/Loading";
+import { PublicPath } from "@/const/PublicPath";
 
 export default function ClientAuthWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { checkAuth, user, loading } = useAuthStore();
 
-  const publicPaths = ["/login", "/register"];
+    
 
   // Chạy checkAuth khi vào trang
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function ClientAuthWrapper({ children }: { children: React.ReactN
   useEffect(() => {
     if (loading) return;
 
-    if (!user && !publicPaths.includes(pathname)) {
+    if (!user && !PublicPath.includes(pathname)) {
       router.push("/login");
     }
   }, [loading, user, pathname]);
@@ -33,7 +34,7 @@ export default function ClientAuthWrapper({ children }: { children: React.ReactN
   useEffect(() => {
     if (loading) return;
 
-    if (user && publicPaths.includes(pathname)) {
+    if (user && PublicPath.includes(pathname)) {
       router.push("/");
     }
   }, [loading, user, pathname]);
