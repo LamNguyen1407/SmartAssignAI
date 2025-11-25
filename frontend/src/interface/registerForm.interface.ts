@@ -16,12 +16,10 @@ export const registerSchema = z.object({
     return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(value);
   }, "Invalid email format"),
   password: z
-    .string()
-    .min(6, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must include at least one uppercase letter")
-    .regex(/[a-z]/, "Password must include at least one lowercase letter")
-    .regex(/[0-9]/, "Password must include at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must include at least one special character"),
+        .string()
+        .min(8, "Password must be at least 8 characters")
+        .max(20, "Password must be at most 20 characters")
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/, "Password must include at least 1 lowercase letter, 1 uppercase letter, 1 number, and 1 special character"),
   username: z
     .string()
     .min(4, "Username must be at least 4 characters")

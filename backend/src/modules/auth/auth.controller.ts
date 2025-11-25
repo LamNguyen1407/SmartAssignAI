@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { AuthJwtGuard } from '../guards/jwt.guard';
 import { ChangePasswordDto } from 'src/model/dtos/user/changePassword.dto';
 import { ForgotPasswordDto } from 'src/model/dtos/user/forgotPassword.dto';
+import { ResetPasswordDto } from 'src/model/dtos/user/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -87,6 +88,11 @@ export class AuthController {
   @Post('forgot-password')
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return await this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return await this.authService.resetPassword(resetPasswordDto);
   }
 
 

@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { LoginUser } from "@/services/auth.service";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import Link from "next/link";
 
 export default function LoginForm() {
     const router = useRouter();
@@ -75,6 +76,9 @@ export default function LoginForm() {
           >
             Login
           </button>
+          <Link href="/forgot-password" className="text-sm w-full flex justify-center items-center text-gray-800 hover:underline">
+            Forgot your Password?
+          </Link>
         </form>
       </CardContent>
     </Card>

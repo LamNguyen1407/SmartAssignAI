@@ -13,6 +13,7 @@ import { RefreshTokenDto } from 'src/model/dtos/user/refreshToken.dto';
 import { ChangePasswordDto } from 'src/model/dtos/user/changePassword.dto';
 import { ResetToken } from 'src/model/schemas/resetToken.schema';
 import { EmailService } from '../email/email.service';
+import { ResetPasswordDto } from 'src/model/dtos/user/resetPassword.dto';
 @Injectable()
 export class AuthService {
     constructor(
@@ -51,13 +52,13 @@ export class AuthService {
         //find user by username or email
         const user = await this.userModel.findOne({ $or: [ { username: identifier }, { email:identifier } ] });
         if (!user) {
-            throw new UnauthorizedException('Invalid username or email');
+            throw new BadRequestException('Invalid username or email');
         }
 
         //compare password
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid password');
+            throw new BadRequestException('Invalid password');
         }
 
         //generate and return access, refresh token 
@@ -70,7 +71,7 @@ export class AuthService {
         console.log('Refreshing token:', token);
         const storedToken = await this.refreshTokenModel.findOne({ token, expiresAt: { $gt: new Date()} });
         if (!storedToken) {
-            throw new UnauthorizedException('Invalid refresh token');
+            throw new BadRequestException('Invalid refresh token');
         }   
         return this.generateJwtToken(storedToken.userId);
     }
@@ -97,11 +98,11 @@ export class AuthService {
         const {oldPassword, newPassword} = changePasswordDto;
         const user =  await this.userModel.findById(userid);
         if(!user){
-            throw new UnauthorizedException('User not found');
+            throw new BadRequestException('User not found');
         }
         const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
         if(!isOldPasswordValid){
-            throw new UnauthorizedException('Old password is incorrect');
+            throw new BadRequestException('Old password is incorrect');
         }
         const hashPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashPassword;
@@ -146,6 +147,21 @@ export class AuthService {
             `
         );
         return {message: 'Link reset password has been sent to your email'};
+    }
 
+    async resetPassword(resetPassword: ResetPasswordDto){
+        const {token , password} = resetPassword;
+        const resetToken = await this.resetTokenModel.findOneAndDelete({token, expiresAt: {$gte: new Date()}});
+        if(!resetToken){
+            throw new BadRequestException('Invalid or expired reset token');
+        }
+        const user = await this.userModel.findById(resetToken.userId);
+        if(!user){
+            throw new BadRequestException('User not found');
+        }
+        const hashPassword = await bcrypt.hash(password, 10);
+        user.password = hashPassword;
+        await user.save();
+        return {message: 'Password has been reset successfully'};
     }
 }
