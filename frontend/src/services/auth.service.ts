@@ -5,7 +5,7 @@ import { RegisterSchema } from "@/interface/registerForm.interface";
 import { IResetPassword, ResetPasswordSchema } from "@/interface/resetPassword.interface";
 
 export const RegisterUser = async (data: RegisterSchema) => {
-    return await axiosClient.post("/auth/register", data);
+    return await axiosClient.post("/auth/signup", data);
 }
 
 export const LoginUser = async (data: LoginSchema) => {

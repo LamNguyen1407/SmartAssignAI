@@ -1,5 +1,5 @@
 import { Gender } from "src/model/schemas/user.schema"
-import { IsString, IsEmail, IsPhoneNumber, IsOptional, IsDate, IsEnum, MinLength, MaxLength, IsNotEmpty, Matches } from 'class-validator';
+import { IsString, IsEmail, IsPhoneNumber, IsOptional, IsDate, IsEnum, MinLength, MaxLength, IsNotEmpty, Matches, IsDateString } from 'class-validator';
 
 export class UserSignUpDto {
     @IsString()
@@ -38,7 +38,7 @@ export class UserSignUpDto {
     avatarUrl?: string;
 
     @IsOptional()
-    @IsDate()
+    @IsDateString()
     dateOfBirth?: Date;
 
     @IsEnum(Gender)
