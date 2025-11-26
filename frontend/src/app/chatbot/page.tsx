@@ -10,8 +10,11 @@ export default function ProfilePage() {
         const values = form.getFieldsValue();
         const formData = new FormData();
         formData.append('file', values.file[0].originFileObj);
+        formData.append('userID', "6911689f70668d1a11ae9853");
+        // formData.append('chatSessionID', "69156a47b300fa095179188f");
+
         // const res = await axios.post("http://localhost:3001/test", formData);
-        const res = await axios.post("http://localhost:3001/test/semantic-chunk", formData);
+        const res = await axios.post("http://localhost:3001/chat/semantic-chunk", formData);
         console.log("res ", res);
     }
 
