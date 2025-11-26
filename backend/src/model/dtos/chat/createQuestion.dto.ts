@@ -6,6 +6,8 @@ export class CreateQuestionDto {
     question: string
 
     @IsString()
-    @IsNotEmpty()
-    chatSessionID: string
+    chatSessionID?: string
+
+    @IsString()
+    userID: string
 }

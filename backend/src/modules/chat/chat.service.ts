@@ -7,6 +7,9 @@ import { Metadata, MetadataDocument } from 'src/model/schemas/metadata.schema';
 import { ChatSession, ChatSessionDocument } from 'src/model/schemas/chatSession.schema';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { generateTitleFromAI } from 'src/utils/generateTitle';
+import { DocumentFile } from 'src/model/schemas/document.schema';
+import { Message, MessageDocument } from 'src/model/schemas/message.schema';
+import { MessageType } from 'src/interface/type';
 
 @Injectable()
 export class ChatService {
@@ -14,12 +17,37 @@ export class ChatService {
     private readonly httpService: HttpService,
     @InjectModel(Metadata.name) private metadataModel: Model<MetadataDocument>,
     @InjectModel(ChatSession.name) private chatSessionModel: Model<ChatSessionDocument>,
+    @InjectModel(DocumentFile.name) private documentFileModel: Model<DocumentFile>,
+    @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
   ) { }
 
   private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-  async create_many(objs: { chunks: number; embedding: number[]; text: string; indexMetadata: number }[]) {
+  async createMessage(objs: { sessionId: string; type: MessageType; content: string }) {
+    return await new this.messageModel({
+      sessionId: objs.sessionId,
+      type: objs.type,
+      content: objs.content,
+    }).save();
+  }
+
+  async getMessagesBySession(sessionId: string, num: number = 10) {
+    return await this.messageModel.find({ sessionId }).sort({ createdAt: -1 }).limit(num).exec();
+  }
+
+  async create_many(objs: { chunks: number; embedding: number[]; text: string; fileId: string }[]) {
     return this.metadataModel.insertMany(objs);
+  }
+
+  async create_documentFile(objs: { filename: string; url: string; mimetype: string; size: number; userId: string; sessionId?: string }) {
+    return await new this.documentFileModel({
+      filename: objs.filename,
+      url: objs.url,
+      mimetype: objs.mimetype,
+      size: objs.size,
+      userId: objs.userId,
+      sessionId: objs.sessionId,
+    }).save();
   }
 
   async findOne(id: string) {
@@ -35,8 +63,8 @@ export class ChatService {
   }
 
   async createChatSession(firstMessage: string, userId: string) {
-      const title = await generateTitleFromAI(firstMessage);
-      return await this.create({ userID: userId, title });
+    const title = await generateTitleFromAI(firstMessage);
+    return await this.create({ userID: userId, title });
   }
 
   async getChatSession(userId: string) {
