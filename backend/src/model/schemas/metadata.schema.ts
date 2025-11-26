@@ -5,9 +5,6 @@ export type MetadataDocument = Metadata & Document;
 
 @Schema()
 export class Metadata {
-    @Prop({ required: true })
-    indexMetadata: number;
-
     @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "ChatSession" })
     ChatSessionID: string;
 

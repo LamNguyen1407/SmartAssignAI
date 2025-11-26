@@ -1,12 +1,12 @@
-import { Prop, Schema } from "@nestjs/mongoose";
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import mongoose, { Document } from "mongoose";
 
-@Schema({timestamps: true})
+@Schema({ timestamps: true })
 export class DocumentFile extends Document {
     @Prop({ required: true })
     filename: string;
 
-    @Prop({ required: true })
+    @Prop({ default: '' })
     url: string; // MinIO / S3 URL
 
     @Prop({ required: true })
@@ -23,3 +23,4 @@ export class DocumentFile extends Document {
     sessionId?: string;
 }
 
+export const DocumentFileSchema = SchemaFactory.createForClass(DocumentFile);
