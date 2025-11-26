@@ -8,8 +8,11 @@ export class Metadata {
     @Prop({ required: true })
     indexMetadata: number;
 
-    @Prop({ required: true, type: mongoose.Types.ObjectId })
+    @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "ChatSession" })
     ChatSessionID: string;
+
+    @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "DocumentFile" })
+    fileId: string;
 
     @Prop({ required: true })
     chunks: number;

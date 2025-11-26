@@ -1,19 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import mongoose, { Document } from 'mongoose';
 import { MessageType } from '../../interface/type';
 
 export type MessageDocument = Message & Document;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Message {
-    @Prop({ required: true })
-    type: MessageType;
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession', required: true })
+  sessionId: string;
 
-    @Prop({ required: true })
-    content: string;
+  @Prop({ required: true, enum: ['user', 'assistant', 'system'] })
+  type: MessageType;
 
-    @Prop({ required: true })
-    timestamp: Date;
+  @Prop({ required: true })
+  content: string;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
