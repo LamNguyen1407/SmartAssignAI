@@ -8,6 +8,11 @@ export enum Gender {
   OTHER = 'other'
 }
 
+export enum Role {
+  USER = 'user',
+  ADMIN = 'admin'
+}
+
 @Schema({ timestamps: true })
 export class User extends Document {
   @Prop({ required: true })
@@ -35,7 +40,7 @@ export class User extends Document {
   dateOfBirth?: Date;
 
   @Prop({ default: 'user', enum: ['user', 'admin'] })
-  role: string;
+  role: Role;
 
   @Prop({ default: true })
   isActive: boolean;

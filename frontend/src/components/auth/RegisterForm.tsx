@@ -15,6 +15,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { registerSchema, RegisterSchema } from "@/interface/registerForm.interface"
 import { RegisterUser } from "@/services/auth.service"
 import { useRouter } from "next/navigation"
+import { toast } from "react-toastify"
 
 export default function RegisterForm() {
 
@@ -34,8 +35,13 @@ export default function RegisterForm() {
       const res = await RegisterUser(data);
       return res;
     },
-    onSuccess: () => { alert("🎉 Đăng ký thành công!"), router.push('/login') },
-    onError: (err: any) => { alert(err.response?.data?.message || "❌ Đăng ký thất bại") },
+    onSuccess: () => { 
+      toast.success("🎉 Register successfully"),
+      router.push("/login");
+     },
+    onError: (err: any) => { 
+      toast.error(err.response?.data?.message || "❌ Register failed")
+     },
   })
 
 
@@ -50,6 +56,7 @@ export default function RegisterForm() {
   })
 
   const onSubmit = (data: RegisterSchema) => {
+    // console.log("Submitting register form with data:", data);
     registerMutation(data);
   }
 

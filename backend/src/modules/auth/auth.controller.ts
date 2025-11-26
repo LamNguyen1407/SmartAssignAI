@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserLoginDto } from 'src/model/dtos/user/userLogin.dto';
 import { UserSignUpDto } from 'src/model/dtos/user/userSignUp.dto';
-import { RefreshTokenDto } from 'src/model/dtos/user/refreshToken.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { Request, Response } from 'express';
+import { AuthJwtGuard } from '../guards/jwt.guard';
+import { ChangePasswordDto } from 'src/model/dtos/user/changePassword.dto';
+import { ForgotPasswordDto } from 'src/model/dtos/user/forgotPassword.dto';
+import { ResetPasswordDto } from 'src/model/dtos/user/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -61,10 +63,36 @@ export class AuthController {
 
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthJwtGuard)
   @Get('profile')
   async protectedRoute(@Req() req){
     return {userId: req.user, message: 'You have accessed a protected route' };
+  }
+
+  @UseGuards(AuthJwtGuard)
+  @Post('logout')
+  async logout(@Res({ passthrough: true }) response: Response, @Req() req) {
+    await this.authService.logout(req.user);
+    
+    response.clearCookie('accessToken');
+    response.clearCookie('refreshToken');
+    return { message: 'Logout successful' };
+  }
+
+  @UseGuards(AuthJwtGuard)
+  @Post('change-password')
+  async changePassword(@Req() req, @Body() changePasswordDto: ChangePasswordDto) {
+    return await this.authService.changePassword(req.user, changePasswordDto);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return await this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return await this.authService.resetPassword(resetPasswordDto);
   }
 
 

@@ -6,6 +6,7 @@ import { Model } from 'mongoose';
 import { Metadata, MetadataDocument } from 'src/model/schemas/metadata.schema';
 import { ChatSession, ChatSessionDocument } from 'src/model/schemas/chatSession.schema';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateTitleFromAI } from 'src/utils/generateTitle';
 
 @Injectable()
 export class ChatService {
@@ -31,6 +32,16 @@ export class ChatService {
       title: objs.title,
       timestamp: new Date(),
     }).save();
+  }
+
+  async createChatSession(firstMessage: string, userId: string) {
+      const title = await generateTitleFromAI(firstMessage);
+      return await this.create({ userID: userId, title });
+  }
+
+  async getChatSession(userId: string) {
+    const chatSession = await this.chatSessionModel.find({ userId }).sort({ timestamp: -1 }).exec();
+    return chatSession;
   }
 
   async saveChatSession(chatSession: ChatSessionDocument) {
