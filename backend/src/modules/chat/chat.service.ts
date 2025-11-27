@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { InjectModel } from '@nestjs/mongoose';
@@ -31,8 +31,12 @@ export class ChatService {
     }).save();
   }
 
-  async getMessagesBySession(sessionId: string, num: number = 10) {
-    return await this.messageModel.find({ sessionId }).sort({ createdAt: -1 }).limit(num).exec();
+  async getMessagesBySession(sessionId: string, num?: number ) {
+    const session = await this.chatSessionModel.findById(sessionId).exec();
+    if (!session) {
+      throw new NotFoundException('Chat session not found');
+    }
+    return await this.messageModel.find({ sessionId}).sort({ createdAt: -1 }).limit(num).exec();
   }
 
   async create_many(objs: { chunks: number; embedding: number[]; text: string; fileId: string }[]) {

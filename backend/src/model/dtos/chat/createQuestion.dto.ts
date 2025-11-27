@@ -8,6 +8,4 @@ export class CreateQuestionDto {
     @IsString()
     chatSessionID?: string
 
-    @IsString()
-    userID: string
 }
