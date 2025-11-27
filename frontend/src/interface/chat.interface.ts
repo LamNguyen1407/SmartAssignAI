@@ -12,9 +12,11 @@ export interface Message {
 }
 
 export interface ChatSession {
-  id: string
+  _id: string
+  userId: string
+  summaryContext?: string
+  documentId?: string
   title: string
-  lastMessage: string
-  timestamp: Date
-
+  createdAt: string
+  updatedAt: string
 }

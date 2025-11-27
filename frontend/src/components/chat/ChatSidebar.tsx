@@ -5,8 +5,22 @@ import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import { Card } from "../ui/card";
 import { ChatSession } from "@/interface/chat.interface";
+import { useQuery } from "@tanstack/react-query";
+import { fetchChatSession } from "@/services/chat.service";
+import Link from "next/link";
 
-export const ChatSidebar = ({ chatSessions }: { chatSessions: ChatSession[] }) => (
+export default function ChatSidebar() {
+
+  const {data: chatSessions = []} = useQuery<ChatSession[]>({
+      queryKey: ["chatSession"],
+      queryFn: async () => {
+         const res =  await fetchChatSession();
+         console.log(res.data);
+         return res.data;
+      },
+    })
+
+  return (
     <div className="h-full bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 lg:p-6 border-b border-gray-200">
         <h2 className="text-lg lg:text-xl font-semibold text-gray-900 mb-2">Chat Sessions</h2>
@@ -19,13 +33,15 @@ export const ChatSidebar = ({ chatSessions }: { chatSessions: ChatSession[] }) =
       <ScrollArea className="flex-1 p-3 lg:p-4 max-h-[calc(100vh-64px)] scroll-auto">
         <div className="space-y-2">
           {chatSessions.map((session) => (
-            <Card key={session.id} className="p-3 lg:p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-              <h3 className="font-medium text-gray-900 text-sm mb-1 truncate">{session.title}</h3>
-              <p className="text-xs text-gray-500 mb-2 truncate">{session.lastMessage}</p>
-              <p className="text-xs text-gray-400">{session.timestamp.toLocaleDateString()}</p>
-            </Card>
+            <Link href={`/chat/${session._id}`}>
+                <Card  key={session._id} className="p-3 lg:p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                <h3 className="font-medium text-gray-900 text-sm mb-1 truncate">{session.title}</h3>
+                <p className="text-xs text-gray-400">{new Date(session.createdAt).toLocaleDateString()}</p>
+              </Card>
+              </Link>
           ))}
         </div>
       </ScrollArea>
     </div>
-  )
+      );
+}

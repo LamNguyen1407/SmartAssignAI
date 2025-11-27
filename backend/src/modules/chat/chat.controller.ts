@@ -75,7 +75,7 @@ export class ChatController {
   }
 
   @UseGuards(AuthJwtGuard)
-  @Get('get-chat-session')
+  @Get('get-chat-sessions')
   async getChatSession(@Req() req) {
     try {
       if (!req.user) throw new Error('User not found');
@@ -85,8 +85,19 @@ export class ChatController {
         data: chatSession
       };
     } catch (error) {
-      return { message: 'Chat session get failed', error: error.message };
+      console.log(error);
+      throw new Error('Chat session get failed');
     }
+  }
+
+  @UseGuards(AuthJwtGuard)
+  @Get('get-messages/:chatSessionID')
+  async getMessages(@Param('chatSessionID') chatSessionID: string) {
+    const messages = await this.chatService.getMessagesBySession(chatSessionID);
+    return {
+        message: 'Messages get successfully',
+        data: messages,
+      };
   }
 
   // answer:
@@ -98,12 +109,13 @@ export class ChatController {
   // + gửi k chunk và context 10 message cuối vào và question LLM để lấy câu trả lời
   // + thêm câu hỏi và trả lời vào message trong Message
   // + trả câu trả lời về frontend
+  @UseGuards(AuthJwtGuard)
   @Post('/question')
   async getAnswer(
-    @Body() createQuestion: CreateQuestionDto
+    @Body() createQuestion: CreateQuestionDto, @Req() req
   ) {
     try {
-      let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, createQuestion.userID))._id.toString();
+      let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, req.user))._id.toString();
       let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 10);
       let mess = mess_10.reverse().map(m => m.content).join('\n');
       if (mess) {

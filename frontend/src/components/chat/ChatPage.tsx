@@ -13,12 +13,18 @@ import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { ChatSession, Message, MessageType } from "@/interface/chat.interface"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { ChatWithAI, fetchChatSession } from "@/services/chat.service"
+import { ChatWithAI, getMessagesBySession } from "@/services/chat.service"
 import { formatAnswer } from "@/components/formatAnswer"
 import ChatSidebar from "@/components/chat/ChatSidebar"
+import { useParams } from "next/navigation"
 
 
 export default function ChatPage() {
+
+    const params = useParams<{ id?: string }>()
+    const sessionId = params.id ? params.id : '';
+    
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -63,6 +69,11 @@ export default function ChatPage() {
       }
       setMessages((prev) => [...prev, errorMessage])
     },
+  })
+
+  const {data: getMessage} = useQuery({
+    queryKey: ["ChatMessage", sessionId],
+    queryFn: () => getMessagesBySession(sessionId),
   })
 
   const handleSendMessage = () => {
