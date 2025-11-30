@@ -10,9 +10,9 @@ import Loading from "@/components/loading/Loading";
 import { PublicPath } from "@/const/PublicPath";
 
 export default function ClientAuthWrapper({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { checkAuth, user, loading } = useAuthStore();
+  // const pathname = usePathname();
+  // const router = useRouter();
+  const { checkAuth, loading } = useAuthStore();
 
     
 
@@ -22,22 +22,22 @@ export default function ClientAuthWrapper({ children }: { children: React.ReactN
   }, []);
 
   // Nếu chưa có user → bắt vào login (trừ trang public)
-  useEffect(() => {
-    if (loading) return;
+  // useEffect(() => {
+  //   if (loading) return;
 
-    if (!user && !PublicPath.includes(pathname)) {
-      router.push("/login");
-    }
-  }, [loading, user, pathname]);
+  //   if (!user && !PublicPath.includes(pathname)) {
+  //     router.push("/login");
+  //   }
+  // }, [loading, user, pathname]);
 
-  // Nếu đã login lại vào login/register → đẩy về dashboard
-  useEffect(() => {
-    if (loading) return;
+  // // Nếu đã login lại vào login/register → đẩy về dashboard
+  // useEffect(() => {
+  //   if (loading) return;
 
-    if (user && PublicPath.includes(pathname)) {
-      router.push("/");
-    }
-  }, [loading, user, pathname]);
+  //   if (user && PublicPath.includes(pathname)) {
+  //     router.push("/");
+  //   }
+  // }, [loading, user, pathname]);
 
   if (loading) return <div>
     <Loading />

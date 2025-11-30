@@ -36,7 +36,7 @@ export class ChatService {
     if (!session) {
       throw new NotFoundException('Chat session not found');
     }
-    return await this.messageModel.find({ sessionId}).sort({ createdAt: -1 }).limit(num).exec();
+    return await this.messageModel.find({ sessionId}).sort({ createdAt: 1}).limit(num).exec();
   }
 
   async create_many(objs: { chunks: number; embedding: number[]; text: string; fileId: string }[]) {
