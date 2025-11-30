@@ -11,16 +11,27 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Send, Upload, Bot, User, FileText, Menu, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { ChatSession, Message, MessageType } from "@/interface/chat.interface"
+import { Message, MessageType } from "@/interface/chat.interface"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { ChatWithAI, fetchChatSession } from "@/services/chat.service"
+import { ChatWithAI, getMessagesBySession } from "@/services/chat.service"
 import { formatAnswer } from "@/components/formatAnswer"
 import ChatSidebar from "@/components/chat/ChatSidebar"
-import { useRouter } from "next/navigation"
-import { toast } from "react-toastify"
+import { useParams } from "next/navigation"
 
 
 export default function ChatPage() {
+  const params = useParams<{ id: string }>()
+  const sessionId = params.id;
+
+  const { data: chatMessages, isLoading: isChatMessagesLoading } = useQuery({
+    queryKey: ["chatMessages", sessionId],
+    queryFn: async () => {
+      const res = await getMessagesBySession(sessionId);
+      return res.data;
+    },
+  })
+
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -30,11 +41,9 @@ export default function ChatPage() {
       timestamp: new Date(),
     },
   ])
-
-  const router = useRouter();
-
-
+  
   const [inputValue, setInputValue] = useState("")
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
@@ -49,13 +58,24 @@ export default function ChatPage() {
   }, [messages])
 
   const {mutate: ChatWithAIMutation, isPending: isChatWithAIMutationPending} = useMutation({
-    mutationFn: (question: string) => ChatWithAI(question),
+    mutationFn: (data: string) => ChatWithAI(data, sessionId),
     onSuccess: (data) => {
-      router.push(`/chat/${data.data.chatSessionID}`);
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: MessageType.ASSISTANT,
+        content: data.data.answer,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, aiMessage])
     },
     onError: (error: any) => {
-      console.log(error);
-      toast.error(error.response?.data?.message || "❌ Chat failed")
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        type: MessageType.SYSTEM,
+        content: `Error: ${error.message || "Something went wrong"}`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
     },
   })
 
@@ -122,6 +142,27 @@ export default function ChatPage() {
       handleSendMessage()
     }
   }
+
+  useEffect(() => {
+  if (!chatMessages) return;
+
+  // map dữ liệu API thành Message[]
+  const formattedMessages: Message[] = chatMessages.map((msg: any) => ({
+    id: msg._id,
+    type: msg.type === "assistant" ? MessageType.ASSISTANT
+         : msg.type === "system" ? MessageType.SYSTEM
+         : MessageType.USER,
+    content: msg.content,
+    timestamp: new Date(msg.createdAt),
+  }));
+
+  setMessages(formattedMessages);
+}, [chatMessages]);
+
+useEffect(() => {
+  console.log("messages", messages)
+},[messages])
+
 
 
   return (

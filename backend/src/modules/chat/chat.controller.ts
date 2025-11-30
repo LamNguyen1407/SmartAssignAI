@@ -1,7 +1,19 @@
 import { ChatSessionSchema } from 'src/model/schemas/chatSession.schema';
 // import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { Controller, Get, Post, Body, Patch, Param, Delete, UploadedFile, UseInterceptors, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UploadedFile,
+  UseInterceptors,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateQuestionDto } from 'src/model/dtos/chat/createQuestion.dto';
 import * as FormData from 'form-data';
@@ -29,11 +41,14 @@ export class ChatController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     try {
-      let chatSession = null
+      let chatSession = null;
       if (body.chatSessionID) {
         chatSession = await this.chatService.findOne(body.chatSessionID);
       } else {
-        chatSession = await this.chatService.create({ userID: body.userID, title: file?.originalname });
+        chatSession = await this.chatService.create({
+          userID: body.userID,
+          title: file?.originalname,
+        });
       }
       if (file) {
         const documentFile = await this.chatService.create_documentFile({
@@ -43,17 +58,20 @@ export class ChatController {
           size: file.size,
           userId: body.userID,
           sessionId: chatSession._id.toString(),
-        })
+        });
         const form = new FormData();
         form.append('file', file.buffer, file.originalname);
         const respone = await axios.post(process.env.API_HANDLE_FILE, form, {
           headers: form.getHeaders(),
-        })
-        const data = respone.data.map((item: any) => ({ ...item, ChatSessionID: chatSession._id.toString(), fileId: documentFile._id.toString() }));
+        });
+        const data = respone.data.map((item: any) => ({
+          ...item,
+          ChatSessionID: chatSession._id.toString(),
+          fileId: documentFile._id.toString(),
+        }));
         await this.chatService.create_many(data);
       }
       return { message: 'File uploaded successfully' };
-
     } catch (error) {
       return { message: 'File upload failed', error: error.message };
     }
@@ -61,13 +79,19 @@ export class ChatController {
 
   @UseGuards(AuthJwtGuard)
   @Post('create')
-  async createChatSession(@Body() createChatSessionDto: CreateChatSessionDto, @Req() req) {
+  async createChatSession(
+    @Body() createChatSessionDto: CreateChatSessionDto,
+    @Req() req,
+  ) {
     try {
       if (!req.user) throw new Error('User not found');
-      const chatSession = await this.chatService.createChatSession(createChatSessionDto.firstMessage, req.user);
+      const chatSession = await this.chatService.createChatSession(
+        createChatSessionDto.firstMessage,
+        req.user,
+      );
       return {
         message: 'Chat session created successfully',
-        data: chatSession
+        data: chatSession,
       };
     } catch (error) {
       return { message: 'Chat session creation failed', error: error.message };
@@ -75,18 +99,29 @@ export class ChatController {
   }
 
   @UseGuards(AuthJwtGuard)
-  @Get('get-chat-session')
+  @Get('get-chat-sessions')
   async getChatSession(@Req() req) {
     try {
       if (!req.user) throw new Error('User not found');
       const chatSession = await this.chatService.getChatSession(req.user);
       return {
         message: 'Chat session get successfully',
-        data: chatSession
+        data: chatSession,
       };
     } catch (error) {
-      return { message: 'Chat session get failed', error: error.message };
+      console.log(error);
+      throw new Error('Chat session get failed');
     }
+  }
+
+  @UseGuards(AuthJwtGuard)
+  @Get('get-messages/:chatSessionID')
+  async getMessages(@Param('chatSessionID') chatSessionID: string) {
+    const messages = await this.chatService.getMessagesBySession(chatSessionID);
+    return {
+      message: 'Messages get successfully',
+      data: messages,
+    };
   }
 
   // answer:
@@ -98,12 +133,11 @@ export class ChatController {
   // + gửi k chunk và context 10 message cuối vào và question LLM để lấy câu trả lời
   // + thêm câu hỏi và trả lời vào message trong Message
   // + trả câu trả lời về frontend
+  @UseGuards(AuthJwtGuard)
   @Post('/question')
-  async getAnswer(
-    @Body() createQuestion: CreateQuestionDto
-  ) {
+  async getAnswer(@Body() createQuestion: CreateQuestionDto, @Req() req) {
     try {
-      let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, createQuestion.userID))._id.toString();
+      let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, req.userID))._id.toString();
       let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 10);
       let mess = mess_10.reverse().map(m => {
         if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.content;
@@ -165,7 +199,6 @@ export class ChatController {
         question = newQuestion;
       }
       const embeddings = await this.chatService.embeddings([question]);
-      // const embeddings = await this.chatService.embeddings([mess + ' ' + createQuestion.question]);
       const vectors = await this.chatService.queryVector(embeddings[0], 18, chatSessionID);
       const text = vectors?.map(vector => vector.text).join(' ');
       const prompt = `
@@ -196,9 +229,6 @@ export class ChatController {
         --- NGỮ CẢNH ---
         ${text}
 
-        --- HỘI THOẠI (Ngữ cảnh tóm tắt 5 câu hỏi và 5 câu trả lời gần nhất) ---
-        ${mess}
-
         --- CÂU HỎI ---
         ${question}
 
@@ -208,28 +238,24 @@ export class ChatController {
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.USER,
-        // content: "Câu hỏi: " + question,
         content: createQuestion.question,
       });
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.ASSISTANT,
-        // content: "Trả lời: " + answer,
         content: answer,
       });
       return {
         message: 'success',
-        answer: answer
+        answer: answer,
+        chatSessionID,
       };
     } catch (error) {
       console.error('Full error:', error.response?.data || error);
       return {
         message: 'failed',
-        error: error.response?.data || error.message
+        error: error.response?.data || error.message,
       };
     }
   }
-
-
-
 }

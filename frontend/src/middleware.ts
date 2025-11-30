@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
   const accessToken = req.cookies.get("accessToken")?.value || null;
+  const refreshToken = req.cookies.get("refreshToken")?.value || null;
 
   const pathname = req.nextUrl.pathname;
 
@@ -20,7 +21,7 @@ export function middleware(req: NextRequest) {
 
   // Neu nguoi dung chua dang nhap, chuyen huong den trang login
   if (protectedRoutes.some((path) => pathname.startsWith(path)) || pathname === "/") {
-    if (!accessToken) {
+    if (!refreshToken && !accessToken) {
       const loginUrl = new URL("/login", req.url);
       return NextResponse.redirect(loginUrl);
     }
