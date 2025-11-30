@@ -105,7 +105,11 @@ export class ChatController {
     try {
       let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, createQuestion.userID))._id.toString();
       let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 10);
-      let mess = mess_10.reverse().map(m => m.content).join('\n');
+      let mess = mess_10.reverse().map(m => {
+        if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.content;
+        else return 'Trả lời: ' + m.content;
+      }).join('\n');
+      let question = createQuestion.question;
       if (mess) {
         const messPrompt = `
           Bạn là một trợ lý AI đang tham gia vào một cuộc hội thoại nhiều bước.
@@ -125,15 +129,45 @@ export class ChatController {
           --- HỘI THOẠI ---
           ${mess}
           --- TÓM TẮT NGỮ CẢNH ---
-          `
+        `;
+        const newMessPrompt = `
+          Bạn là một hệ thống REWRITE QUERY (tái tạo câu hỏi).
+
+          Nhiệm vụ:
+          Từ HỘI THOẠI trước đó + CÂU HỎI MỚI, hãy tạo ra một câu hỏi HOÀN CHỈNH, RÕ NGHĨA, TỰ ĐỨNG MỘT MÌNH.
+          Đây là câu hỏi cuối cùng sẽ được dùng để truy vấn RAG (vector search).
+
+          Yêu cầu:
+          - Không tóm tắt hội thoại.
+          - Không giải thích.
+          - Không phân tích.
+          - Chỉ tạo ra MỘT câu hỏi cuối cùng, rõ ràng nhất.
+          - Nếu câu hỏi mới là “tiếp theo”, “phần tiếp theo”, “mục tiếp theo”, hãy suy ra ý muốn dựa trên ngữ cảnh cũ.
+          - Nếu người dùng nói mơ hồ, bạn phải chuyển thành câu hỏi rõ nghĩa.
+          - Nếu người dùng hỏi lại nội dung trước, hãy viết câu hỏi sao cho đầy đủ và trả lời đúng phần họ muốn.
+          - Nếu câu hỏi mới đã đầy đủ ⇒ trả về chính nó.
+
+          ---
+
+          HỘI THOẠI TRƯỚC:
+          ${mess}
+
+          CÂU HỎI MỚI (hiện tại):
+          ${createQuestion.question}
+
+          ---
+
+          HÃY TRẢ RA CHỈ MỘT CÂU HỎI HOÀN CHỈNH:
+          `;
         const context = await this.chatService.askAI(messPrompt);
         mess = context;
+        const newQuestion = await this.chatService.askAI(newMessPrompt);
+        question = newQuestion;
       }
-      const embeddings = await this.chatService.embeddings([mess + ' ' + createQuestion.question]);
+      const embeddings = await this.chatService.embeddings([question]);
+      // const embeddings = await this.chatService.embeddings([mess + ' ' + createQuestion.question]);
       const vectors = await this.chatService.queryVector(embeddings[0], 18, chatSessionID);
-      console.log('vectors:', vectors.length);
       const text = vectors?.map(vector => vector.text).join(' ');
-      console.log('text:', text);
       const prompt = `
         Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
         Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
@@ -166,7 +200,7 @@ export class ChatController {
         ${mess}
 
         --- CÂU HỎI ---
-        ${createQuestion.question}
+        ${question}
 
         --- TRẢ LỜI ---
         `;
@@ -174,12 +208,14 @@ export class ChatController {
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.USER,
-        content: "Câu hỏi: " + createQuestion.question,
+        // content: "Câu hỏi: " + question,
+        content: createQuestion.question,
       });
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.ASSISTANT,
-        content: "Trả lời: " + answer,
+        // content: "Trả lời: " + answer,
+        content: answer,
       });
       return {
         message: 'success',
