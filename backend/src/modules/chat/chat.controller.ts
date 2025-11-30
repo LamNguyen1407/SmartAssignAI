@@ -1,7 +1,19 @@
 import { ChatSessionSchema } from 'src/model/schemas/chatSession.schema';
 // import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { Controller, Get, Post, Body, Patch, Param, Delete, UploadedFile, UseInterceptors, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UploadedFile,
+  UseInterceptors,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateQuestionDto } from 'src/model/dtos/chat/createQuestion.dto';
 import * as FormData from 'form-data';
@@ -13,7 +25,7 @@ import { AuthJwtGuard } from '../guards/jwt.guard';
 
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) { }
+  constructor(private readonly chatService: ChatService) {}
 
   // upload:
   // + nhận file? + userID + chatSessionID? từ frontend
@@ -29,11 +41,14 @@ export class ChatController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     try {
-      let chatSession = null
+      let chatSession = null;
       if (body.chatSessionID) {
         chatSession = await this.chatService.findOne(body.chatSessionID);
       } else {
-        chatSession = await this.chatService.create({ userID: body.userID, title: file?.originalname });
+        chatSession = await this.chatService.create({
+          userID: body.userID,
+          title: file?.originalname,
+        });
       }
       if (file) {
         const documentFile = await this.chatService.create_documentFile({
@@ -43,17 +58,20 @@ export class ChatController {
           size: file.size,
           userId: body.userID,
           sessionId: chatSession._id.toString(),
-        })
+        });
         const form = new FormData();
         form.append('file', file.buffer, file.originalname);
         const respone = await axios.post(process.env.API_HANDLE_FILE, form, {
           headers: form.getHeaders(),
-        })
-        const data = respone.data.map((item: any) => ({ ...item, ChatSessionID: chatSession._id.toString(), fileId: documentFile._id.toString() }));
+        });
+        const data = respone.data.map((item: any) => ({
+          ...item,
+          ChatSessionID: chatSession._id.toString(),
+          fileId: documentFile._id.toString(),
+        }));
         await this.chatService.create_many(data);
       }
       return { message: 'File uploaded successfully' };
-
     } catch (error) {
       return { message: 'File upload failed', error: error.message };
     }
@@ -61,13 +79,19 @@ export class ChatController {
 
   @UseGuards(AuthJwtGuard)
   @Post('create')
-  async createChatSession(@Body() createChatSessionDto: CreateChatSessionDto, @Req() req) {
+  async createChatSession(
+    @Body() createChatSessionDto: CreateChatSessionDto,
+    @Req() req,
+  ) {
     try {
       if (!req.user) throw new Error('User not found');
-      const chatSession = await this.chatService.createChatSession(createChatSessionDto.firstMessage, req.user);
+      const chatSession = await this.chatService.createChatSession(
+        createChatSessionDto.firstMessage,
+        req.user,
+      );
       return {
         message: 'Chat session created successfully',
-        data: chatSession
+        data: chatSession,
       };
     } catch (error) {
       return { message: 'Chat session creation failed', error: error.message };
@@ -82,7 +106,7 @@ export class ChatController {
       const chatSession = await this.chatService.getChatSession(req.user);
       return {
         message: 'Chat session get successfully',
-        data: chatSession
+        data: chatSession,
       };
     } catch (error) {
       console.log(error);
@@ -95,9 +119,9 @@ export class ChatController {
   async getMessages(@Param('chatSessionID') chatSessionID: string) {
     const messages = await this.chatService.getMessagesBySession(chatSessionID);
     return {
-        message: 'Messages get successfully',
-        data: messages,
-      };
+      message: 'Messages get successfully',
+      data: messages,
+    };
   }
 
   // answer:
@@ -111,13 +135,24 @@ export class ChatController {
   // + trả câu trả lời về frontend
   @UseGuards(AuthJwtGuard)
   @Post('/question')
-  async getAnswer(
-    @Body() createQuestion: CreateQuestionDto, @Req() req
-  ) {
+  async getAnswer(@Body() createQuestion: CreateQuestionDto, @Req() req) {
     try {
-      let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, req.user))._id.toString();
-      let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 10);
-      let mess = mess_10.reverse().map(m => m.content).join('\n');
+      let chatSessionID = createQuestion.chatSessionID
+        ? createQuestion.chatSessionID
+        : (
+            await this.chatService.createChatSession(
+              createQuestion.question,
+              req.user,
+            )
+          )._id.toString();
+      let mess_10 = await this.chatService.getMessagesBySession(
+        chatSessionID,
+        10,
+      );
+      let mess = mess_10
+        .reverse()
+        .map((m) => m.content)
+        .join('\n');
       if (mess) {
         const messPrompt = `
           Bạn là một trợ lý AI đang tham gia vào một cuộc hội thoại nhiều bước.
@@ -137,14 +172,20 @@ export class ChatController {
           --- HỘI THOẠI ---
           ${mess}
           --- TÓM TẮT NGỮ CẢNH ---
-          `
+          `;
         const context = await this.chatService.askAI(messPrompt);
         mess = context;
       }
-      const embeddings = await this.chatService.embeddings([mess + ' ' + createQuestion.question]);
-      const vectors = await this.chatService.queryVector(embeddings[0], 18, chatSessionID);
+      const embeddings = await this.chatService.embeddings([
+        mess + ' ' + createQuestion.question,
+      ]);
+      const vectors = await this.chatService.queryVector(
+        embeddings[0],
+        18,
+        chatSessionID,
+      );
       console.log('vectors:', vectors.length);
-      const text = vectors?.map(vector => vector.text).join(' ');
+      const text = vectors?.map((vector) => vector.text).join(' ');
       console.log('text:', text);
       const prompt = `
         Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
@@ -186,26 +227,24 @@ export class ChatController {
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.USER,
-        content: "Câu hỏi: " + createQuestion.question,
+        content: createQuestion.question,
       });
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.ASSISTANT,
-        content: "Trả lời: " + answer,
+        content: answer,
       });
       return {
         message: 'success',
-        answer: answer
+        answer: answer,
+        chatSessionID,
       };
     } catch (error) {
       console.error('Full error:', error.response?.data || error);
       return {
         message: 'failed',
-        error: error.response?.data || error.message
+        error: error.response?.data || error.message,
       };
     }
   }
-
-
-
 }
