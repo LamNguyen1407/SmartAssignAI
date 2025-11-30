@@ -58,7 +58,7 @@ export default function ChatPage() {
   }, [messages])
 
   const {mutate: ChatWithAIMutation, isPending: isChatWithAIMutationPending} = useMutation({
-    mutationFn: (question: string) => ChatWithAI(question),
+    mutationFn: (data: string) => ChatWithAI(data, sessionId),
     onSuccess: (data) => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),

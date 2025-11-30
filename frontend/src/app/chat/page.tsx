@@ -16,6 +16,8 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { ChatWithAI, fetchChatSession } from "@/services/chat.service"
 import { formatAnswer } from "@/components/formatAnswer"
 import ChatSidebar from "@/components/chat/ChatSidebar"
+import { useRouter } from "next/navigation"
+import { toast } from "react-toastify"
 
 
 export default function ChatPage() {
@@ -28,8 +30,11 @@ export default function ChatPage() {
       timestamp: new Date(),
     },
   ])
-  const [inputValue, setInputValue] = useState("")
 
+  const router = useRouter();
+
+
+  const [inputValue, setInputValue] = useState("")
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isMobile = useIsMobile()
@@ -46,22 +51,11 @@ export default function ChatPage() {
   const {mutate: ChatWithAIMutation, isPending: isChatWithAIMutationPending} = useMutation({
     mutationFn: (question: string) => ChatWithAI(question),
     onSuccess: (data) => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: MessageType.ASSISTANT,
-        content: data.data.answer,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, aiMessage])
+      router.push(`/chat/${data.data.chatSessionID}`);
     },
     onError: (error: any) => {
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        type: MessageType.SYSTEM,
-        content: `Error: ${error.message || "Something went wrong"}`,
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errorMessage])
+      console.log(error);
+      toast.error(error.response?.data?.message || "❌ Chat failed")
     },
   })
 

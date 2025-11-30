@@ -4,8 +4,11 @@ import { firstValueFrom } from 'rxjs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Metadata, MetadataDocument } from 'src/model/schemas/metadata.schema';
-import { ChatSession, ChatSessionDocument } from 'src/model/schemas/chatSession.schema';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  ChatSession,
+  ChatSessionDocument,
+} from 'src/model/schemas/chatSession.schema';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { generateTitleFromAI } from 'src/utils/generateTitle';
 import { DocumentFile } from 'src/model/schemas/document.schema';
 import { Message, MessageDocument } from 'src/model/schemas/message.schema';
@@ -16,14 +19,20 @@ export class ChatService {
   constructor(
     private readonly httpService: HttpService,
     @InjectModel(Metadata.name) private metadataModel: Model<MetadataDocument>,
-    @InjectModel(ChatSession.name) private chatSessionModel: Model<ChatSessionDocument>,
-    @InjectModel(DocumentFile.name) private documentFileModel: Model<DocumentFile>,
+    @InjectModel(ChatSession.name)
+    private chatSessionModel: Model<ChatSessionDocument>,
+    @InjectModel(DocumentFile.name)
+    private documentFileModel: Model<DocumentFile>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
-  ) { }
+  ) {}
 
   private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-  async createMessage(objs: { sessionId: string; type: MessageType; content: string }) {
+  async createMessage(objs: {
+    sessionId: string;
+    type: MessageType;
+    content: string;
+  }) {
     return await new this.messageModel({
       sessionId: objs.sessionId,
       type: objs.type,
@@ -31,19 +40,37 @@ export class ChatService {
     }).save();
   }
 
-  async getMessagesBySession(sessionId: string, num?: number ) {
+  async getMessagesBySession(sessionId: string, num?: number) {
     const session = await this.chatSessionModel.findById(sessionId).exec();
     if (!session) {
       throw new NotFoundException('Chat session not found');
     }
-    return await this.messageModel.find({ sessionId}).sort({ createdAt: 1}).limit(num).exec();
+    return await this.messageModel
+      .find({ sessionId })
+      .sort({ createdAt: 1 })
+      .limit(num)
+      .exec();
   }
 
-  async create_many(objs: { chunks: number; embedding: number[]; text: string; fileId: string }[]) {
+  async create_many(
+    objs: {
+      chunks: number;
+      embedding: number[];
+      text: string;
+      fileId: string;
+    }[],
+  ) {
     return this.metadataModel.insertMany(objs);
   }
 
-  async create_documentFile(objs: { filename: string; url: string; mimetype: string; size: number; userId: string; sessionId?: string }) {
+  async create_documentFile(objs: {
+    filename: string;
+    url: string;
+    mimetype: string;
+    size: number;
+    userId: string;
+    sessionId?: string;
+  }) {
     return await new this.documentFileModel({
       filename: objs.filename,
       url: objs.url,
@@ -58,11 +85,10 @@ export class ChatService {
     return await this.chatSessionModel.findById(id).exec();
   }
 
-  async create(objs: { userID: any, title: string }) {
+  async create(objs: { userID: any; title: string }) {
     return await new this.chatSessionModel({
       userId: objs.userID,
       title: objs.title,
-      timestamp: new Date(),
     }).save();
   }
 
@@ -72,7 +98,10 @@ export class ChatService {
   }
 
   async getChatSession(userId: string) {
-    const chatSession = await this.chatSessionModel.find({ userId }).sort({ timestamp: -1 }).exec();
+    const chatSession = await this.chatSessionModel
+      .find({ userId })
+      .sort({ timestamp: -1 })
+      .exec();
     return chatSession;
   }
 
@@ -81,7 +110,7 @@ export class ChatService {
   }
 
   async askAI(prompt: string) {
-    const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(prompt);
     return result.response.text();
   }
@@ -95,11 +124,11 @@ export class ChatService {
           queryVector: vector,
           numCandidates: topK * 5,
           limit: topK,
-        }
+        },
       },
       {
-        $match: { ChatSessionID: chatSessionID }
-      }
+        $match: { ChatSessionID: chatSessionID },
+      },
     ]);
     return result;
   }
@@ -107,7 +136,9 @@ export class ChatService {
   async embeddings(chunks: string[]) {
     const url = process.env.API_EMBEDDINGS;
 
-    const response = await firstValueFrom(this.httpService.post(url, { texts: chunks }));
+    const response = await firstValueFrom(
+      this.httpService.post(url, { texts: chunks }),
+    );
     return response.data.embeddings;
   }
 
