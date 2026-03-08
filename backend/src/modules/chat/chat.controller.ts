@@ -124,132 +124,97 @@ export class ChatController {
     };
   }
 
-  // answer:
-  // + backend nhận (chatSessionID + question)
-  // + lấy ra được 10 message gần nhất từ chatSessionID
-  // + tóm tắt 10 tin nhắn gần nhất để lấy context
-  // + tạo embbeding từ (context + question)
-  // + metadata thực hiện lấy ra k chunk phù hợp với embbeding
-  // + gửi k chunk và context 10 message cuối vào và question LLM để lấy câu trả lời
-  // + thêm câu hỏi và trả lời vào message trong Message
-  // + trả câu trả lời về frontend
-  @UseGuards(AuthJwtGuard)
+  // @UseGuards(AuthJwtGuard)
   @Post('/question')
   async getAnswer(@Body() createQuestion: CreateQuestionDto, @Req() req) {
     try {
       let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, req.userID))._id.toString();
       let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 10);
-      let mess = mess_10.reverse().map(m => {
-        if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.content;
+      let mess = mess_10.map(m => {
+        if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.contextContent;
         else return 'Trả lời: ' + m.content;
       }).join('\n');
-      let question = createQuestion.question;
-      if (mess) {
-        const messPrompt = `
-          Bạn là một trợ lý AI đang tham gia vào một cuộc hội thoại nhiều bước.
-          Nhiệm vụ của bạn: TÓM TẮT lại ngữ cảnh hội thoại dưới đây theo cách giúp trợ lý hiểu được:
-          - Người dùng đang làm gì hoặc muốn đạt được điều gì
-          - Các chủ đề chính đã được thảo luận
-          - Các bước đang thực hiện dở dang (nếu có)
-          - Người dùng hiện đang hỏi về phần nào của quy trình
-          - Các thông tin quan trọng cần ghi nhớ cho bước tiếp theo
-
-          Hãy tóm tắt thật ngắn gọn nhưng đầy đủ để trợ lý có thể:
-          - Tiếp tục trả lời câu hỏi hiện tại mà không bị lạc ngữ cảnh
-          - Biết người dùng đang ở bước nào
-          - Nhận biết các yêu cầu đang tiếp diễn (ví dụ: "tiếp theo", "tiếp tục phần trước", "phần còn lại", "mục tiếp theo")
-          - Không mô tả chi tiết hội thoại, chỉ mô tả MỤC ĐÍCH và TIẾN TRÌNH.
-
-          --- HỘI THOẠI ---
-          ${mess}
-          --- TÓM TẮT NGỮ CẢNH ---
-        `;
-        const newMessPrompt = `
-          Bạn là một hệ thống REWRITE QUERY (tái tạo câu hỏi).
-
-          Nhiệm vụ:
-          Từ HỘI THOẠI trước đó + CÂU HỎI MỚI, hãy tạo ra một câu hỏi HOÀN CHỈNH, RÕ NGHĨA, TỰ ĐỨNG MỘT MÌNH.
-          Đây là câu hỏi cuối cùng sẽ được dùng để truy vấn RAG (vector search).
-
-          Yêu cầu:
-          - Không tóm tắt hội thoại.
-          - Không giải thích.
-          - Không phân tích.
-          - Chỉ tạo ra MỘT câu hỏi cuối cùng, rõ ràng nhất.
-          - Nếu câu hỏi mới là “tiếp theo”, “phần tiếp theo”, “mục tiếp theo”, hãy suy ra ý muốn dựa trên ngữ cảnh cũ.
-          - Nếu người dùng nói mơ hồ, bạn phải chuyển thành câu hỏi rõ nghĩa.
-          - Nếu người dùng hỏi lại nội dung trước, hãy viết câu hỏi sao cho đầy đủ và trả lời đúng phần họ muốn.
-          - Nếu câu hỏi mới đã đầy đủ ⇒ trả về chính nó.
-
-          ---
-
-          HỘI THOẠI TRƯỚC:
-          ${mess}
-
-          CÂU HỎI MỚI (hiện tại):
-          ${createQuestion.question}
-
-          ---
-
-          HÃY TRẢ RA CHỈ MỘT CÂU HỎI HOÀN CHỈNH:
-          `;
-        const context = await this.chatService.askAI(messPrompt);
-        mess = context;
-        const newQuestion = await this.chatService.askAI(newMessPrompt);
-        question = newQuestion;
-      }
-      const embeddings = await this.chatService.embeddings([question]);
-      const vectors = await this.chatService.queryVector(embeddings[0], 18, chatSessionID);
-      const text = vectors?.map(vector => vector.text).join(' ');
-      const prompt = `
-        Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
-        Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
-        Hãy tuân theo quy tắc sau:
-
-        1. Ngữ cảnh có thể chứa mô tả về cấu trúc file đầu vào (input_file), ví dụ như:
-          - Các dòng đầu có dạng: C1 C2
-          - Các dòng tiếp theo có dạng: L1 L2
-          => Nghĩa là dòng thứ nhất trong testcase tương ứng với HP1, HP2, và dòng thứ hai tương ứng với L1, L2.
-
-        2. Khi người dùng đưa vào một testcase (dưới dạng nhiều dòng số), trước tiên hãy ánh xạ từng dòng trong testcase với các biến đã mô tả trong ngữ cảnh, rồi áp dụng công thức hoặc ví dụ trong ngữ cảnh để tính kết quả đầu ra chính xác.
-        3. Có thể người dùng sẽ không đưa ra testcase, mà sẽ đưa ra các số liệu riêng lẻ. Trong trường hợp này, hãy xác định biến nào tương ứng với số liệu đó dựa trên ngữ cảnh, sau đó áp dụng công thức hoặc quy tắc đã mô tả để tính toán kết quả.
-        4. Trước khi bắt đầu tính toán, hãy tìm trong tài liệu các đoạn nói về:
-          - giới hạn giá trị của các giá trị (kể cả giá trị đầu vào cũng phải nằm trong giới hạn này, nếu giá trị đầu vào vượt giới hạn hãy đưa về giá trị phù hợp theo ngữ cảnh).
-          - cách làm tròn. (không tự ý làm tròn các biến không được đề cập về quy định làm tròn)
-          - điều kiện dừng vòng lặp.
-          => Sau đó áp dụng các quy tắc đó cho bài toán này. Nếu tài liệu không quy định, hãy dùng quy tắc toán học thông thường.
-
-        5. Nếu ngữ cảnh có thông tin liên quan, hãy trả lời rõ ràng, có cấu trúc (bullet points, đoạn).
-        6. Không cung cấp code cụ thể và các đoạn mã giải bài tập cụ thể cho dù có được yêu cầu.
-        7. Trả lời bằng tiếng Việt.
-        8. Không sử dụng các cụm như “Dựa vào ngữ cảnh” hay “Dựa trên thông tin bạn cung cấp”.
-        9. Nếu có yêu cầu tính toán, hãy trình bày quá trình suy luận (mapping biến → giá trị → công thức → kết quả).
-        10. Tách câu trả lời theo bố cục: Câu trả lời - Giải thích - Kết luận
-
-        --- NGỮ CẢNH ---
-        ${text}
-
-        --- CÂU HỎI ---
-        ${question}
-
-        --- TRẢ LỜI ---
-        `;
-      const answer = await this.chatService.askAI(prompt);
+      mess = await this.chatService.summaryContext(mess) ? mess : '';
+      let question = await this.chatService.rewriteQuestion(createQuestion.question, mess);
+      let intent = await this.chatService.classifyQuestion(question, chatSessionID);
+      intent = JSON.parse(intent)
+      console.log(intent)
+      let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, mess, chatSessionID);
+      console.log(answer)
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.USER,
         content: createQuestion.question,
+        contextContent: question,
       });
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.ASSISTANT,
         content: answer,
+        contextContent: '',
       });
       return {
         message: 'success',
         answer: answer,
         chatSessionID,
       };
+      // const embeddings = await this.chatService.embeddings([question]);
+      // const vectors = await this.chatService.queryVector(embeddings[0], 18, chatSessionID);
+      // const text = vectors?.map(vector => vector.text).join(' ');
+      // const prompt = `
+      //   Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
+      //   Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
+      //   Hãy tuân theo quy tắc sau:
+
+      //   1. Ngữ cảnh có thể chứa mô tả về cấu trúc file đầu vào (input_file), ví dụ như:
+      //     - Các dòng đầu có dạng: C1 C2
+      //     - Các dòng tiếp theo có dạng: L1 L2
+      //     => Nghĩa là dòng thứ nhất trong testcase tương ứng với HP1, HP2, và dòng thứ hai tương ứng với L1, L2.
+
+      //   2. Khi người dùng đưa vào một testcase (dưới dạng nhiều dòng số), trước tiên hãy ánh xạ từng dòng trong testcase với các biến đã mô tả trong ngữ cảnh, rồi áp dụng công thức hoặc ví dụ trong ngữ cảnh để tính kết quả đầu ra chính xác.
+      //   3. Có thể người dùng sẽ không đưa ra testcase, mà sẽ đưa ra các số liệu riêng lẻ. Trong trường hợp này, hãy xác định biến nào tương ứng với số liệu đó dựa trên ngữ cảnh, sau đó áp dụng công thức hoặc quy tắc đã mô tả để tính toán kết quả.
+      //   4. Trước khi bắt đầu tính toán, hãy tìm trong tài liệu các đoạn nói về:
+      //     - giới hạn giá trị của các giá trị (kể cả giá trị đầu vào cũng phải nằm trong giới hạn này, nếu giá trị đầu vào vượt giới hạn hãy đưa về giá trị phù hợp theo ngữ cảnh).
+      //     - cách làm tròn. (không tự ý làm tròn các biến không được đề cập về quy định làm tròn)
+      //     - điều kiện dừng vòng lặp.
+      //     => Sau đó áp dụng các quy tắc đó cho bài toán này. Nếu tài liệu không quy định, hãy dùng quy tắc toán học thông thường.
+
+      //   5. Nếu ngữ cảnh có thông tin liên quan, hãy trả lời rõ ràng, có cấu trúc (bullet points, đoạn).
+      //   6. Không cung cấp code cụ thể và các đoạn mã giải bài tập cụ thể cho dù có được yêu cầu.
+      //   7. Trả lời bằng tiếng Việt.
+      //   8. Không sử dụng các cụm như “Dựa vào ngữ cảnh” hay “Dựa trên thông tin bạn cung cấp”.
+      //   9. Nếu có yêu cầu tính toán, hãy trình bày quá trình suy luận (mapping biến → giá trị → công thức → kết quả).
+      //   10. Tách câu trả lời theo bố cục: Câu trả lời - Giải thích - Kết luận
+
+      //   --- NGỮ CẢNH ---
+      //   ${text}
+
+      //   --- NGỮ CẢNH TÓM TẮT ---
+      //   ${mess}
+
+      //   --- CÂU HỎI ---
+      //   ${question}
+
+      //   --- TRẢ LỜI ---
+      //   `;
+      // const answer = await this.chatService.askAI(prompt);
+      // await this.chatService.createMessage({
+      //   sessionId: chatSessionID,
+      //   type: MessageType.USER,
+      //   content: createQuestion.question,
+      //   contextContent: question,
+      // });
+      // await this.chatService.createMessage({
+      //   sessionId: chatSessionID,
+      //   type: MessageType.ASSISTANT,
+      //   content: answer,
+      //   contextContent: '',
+      // });
+      // return {
+      //   message: 'success',
+      //   answer: answer,
+      //   chatSessionID,
+      // };
     } catch (error) {
       console.error('Full error:', error.response?.data || error);
       return {
