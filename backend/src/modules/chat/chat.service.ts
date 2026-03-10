@@ -124,6 +124,9 @@ export class ChatService {
     const result = await this.metadataModel.aggregate([
       {
         $vectorSearch: {
+          filter: {
+            ChatSessionID: chatSessionID
+          },
           index: 'vector_index',
           path: 'embedding',
           queryVector: vector,
@@ -132,40 +135,61 @@ export class ChatService {
         },
       },
       {
-        $match: { ChatSessionID: chatSessionID },
-      },
-      {
         $project: {
+          _id: 1,
           text: 1,
-          metadata: 1,
           score: { $meta: "vectorSearchScore" }
         }
       }
     ]);
+    return result;
+  }
+
+  async queryKeyword(keyword: string, chatSessionID: string, topK: number) {
     const keywordResults = await this.metadataModel.aggregate([
       {
         $search: {
           index: "full_text_search",
-          text: {
-            query: "Nhiệm vụ 5 findCorrectPassword",
-            path: ["text", "metadata.H3"]
+          compound: {
+            must: [
+              {
+                text: {
+                  query: keyword,
+                  path: ["text", "metadata.H3"]
+                }
+              }
+            ],
+            filter: [{ equals: { path: "ChatSessionID", value: chatSessionID } }]
           }
         }
       },
       { $limit: topK },
       {
         $project: {
+          _id: 1,
           text: 1,
-          metadata: 1,
           score: { $meta: "searchScore" }
         }
       }
     ]);
-    const combined = [...result, ...keywordResults];
-    combined.sort((a, b) => b.score - a.score);
-    console.log("vector search ", combined.slice(0, topK))
-    return combined.slice(0, topK);
-    return result;
+    return keywordResults;
+  }
+
+  async combineChunks(arr1: { _id: any, text: string, score: number }[], arr2: { _id: any, text: string, score: number }[], topK: number) {
+    const map = new Map();
+    arr1.forEach((item, index) => {
+      map.set(item._id.toString(), { text: item.text, score: 1 / (index + 1 + 60) });
+    });
+    arr2.forEach((item, index) => {
+      if (!map.has(item._id.toString())) {
+        map.set(item._id.toString(), { text: item.text, score: 1 / (index + 1 + 60) });
+      } else {
+        map.get(item._id.toString()).score += 1 / (index + 1 + 60);
+      }
+    });
+    const merged = Array.from(map.values())
+    merged.sort((a, b) => b.score - a.score)
+    return merged.slice(0, topK);
   }
 
   async embeddings(chunks: string[]) {
@@ -305,10 +329,12 @@ export class ChatService {
     return result;
   }
 
-  async getContext(question, chatSessionID, k?) {
+  async getContext(question, chatSessionID, k: number = 8) {
     const embeddings = await this.embeddings([question]);
-    const vectors = await this.queryVector(embeddings[0], k ?? 16, chatSessionID);
-    const text = vectors?.map(vector => vector.text).join(' ');
+    const keywordResults = await this.queryKeyword(question, chatSessionID, k);
+    const vectorResults = await this.queryVector(embeddings[0], k, chatSessionID);
+    const chunks = await this.combineChunks(keywordResults, vectorResults, k);
+    const text = chunks?.map(chunk => chunk.text).join(' ');
     return text;
   }
 
