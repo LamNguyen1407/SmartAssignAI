@@ -17,6 +17,9 @@ export class Message {
 
   @Prop({ default: '' })
   contextContent: string;
+
+  @Prop({ default: '' })
+  summary: string;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
