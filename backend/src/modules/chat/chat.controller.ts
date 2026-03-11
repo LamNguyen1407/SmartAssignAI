@@ -129,18 +129,33 @@ export class ChatController {
   async getAnswer(@Body() createQuestion: CreateQuestionDto, @Req() req) {
     try {
       let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, req.userID))._id.toString();
-      let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 10);
-      let mess = mess_10.map(m => {
-        if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.contextContent;
-        else return 'Trả lời: ' + m.content;
+      let shortTermMessages = await this.chatService.getMessagesBySession(chatSessionID, 0, 10);
+      let shortTermMess = shortTermMessages.map(m => {
+        if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+        else return 'bot: ' + m.summary;
       }).join('\n');
-      mess = await this.chatService.summaryContext(mess) ? mess : '';
-      let question = await this.chatService.rewriteQuestion(createQuestion.question, mess);
+      let longTermMessages = await this.chatService.getMessagesBySession(chatSessionID, 11, 20);
+      let longTermMess = longTermMessages.map(m => {
+        if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+        else return 'bot: ' + m.summary;
+      }).join('\n');
+      if (longTermMess.length > 1000) { longTermMess = await this.chatService.summaryContext(longTermMess); }
+      let history = `10 tin nhắn gần nhất: ${shortTermMess}\nNgữ cảnh 10 tin nhắn tiếp theo đã tóm tắt: ${longTermMess}`
+      let question = await this.chatService.rewriteQuestion(createQuestion.question, longTermMess);
+      // let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 0, 10);
+      // let mess = mess_10.map(m => {
+      //   if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.contextContent;
+      //   else return 'Trả lời: ' + m.content;
+      // }).join('\n');
+      // mess = await this.chatService.summaryContext(mess) ? mess : '';
+      // let question = await this.chatService.rewriteQuestion(createQuestion.question, mess);
       let intent = await this.chatService.classifyQuestion(question, chatSessionID);
       intent = JSON.parse(intent)
       console.log(intent)
-      let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, mess, chatSessionID);
-      console.log(answer)
+      // let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, mess, chatSessionID);
+      let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, history, chatSessionID);
+      console.log("answer")
+      console.log(typeof answer)
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.USER,
@@ -150,12 +165,13 @@ export class ChatController {
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.ASSISTANT,
-        content: answer,
+        content: answer.answer ? answer.answer : '',
         contextContent: '',
+        summary: answer.summary ? answer.summary : '',
       });
       return {
         message: 'success',
-        answer: answer,
+        answer: answer.answer ? answer.answer : '',
         chatSessionID,
       };
       // const embeddings = await this.chatService.embeddings([question]);

@@ -15,7 +15,6 @@ import { Message, MessageDocument } from 'src/model/schemas/message.schema';
 import { MessageType } from 'src/interface/type';
 import { SchemaType } from '@google/generative-ai';
 import Groq from 'groq-sdk';
-import OpenAI from "openai";
 
 @Injectable()
 export class ChatService {
@@ -31,26 +30,24 @@ export class ChatService {
 
   private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   private groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-  private openai = new OpenAI({
-    baseURL: "https://api.deepseek.com",
-    apiKey: process.env.DEEPSEEK_API_KEY
-  });
 
   async createMessage(objs: {
     sessionId: string;
     type: MessageType;
     content: string;
     contextContent?: string;
+    summary?: string;
   }) {
     return await new this.messageModel({
       sessionId: objs.sessionId,
       type: objs.type,
       content: objs.content,
       contextContent: objs.contextContent || '',
+      summary: objs.summary || '',
     }).save();
   }
 
-  async getMessagesBySession(sessionId: string, num?: number) {
+  async getMessagesBySession(sessionId: string, start: number = 0, end: number = 0) {
     const session = await this.chatSessionModel.findById(sessionId).exec();
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -58,7 +55,8 @@ export class ChatService {
     let msgs = await this.messageModel
       .find({ sessionId })
       .sort({ createdAt: -1 })
-      .limit(num)
+      .skip(start)
+      .limit(end)
       .exec();
     return msgs.reverse();
   }
@@ -214,6 +212,7 @@ export class ChatService {
           - Các bước đang thực hiện dở dang (nếu có)
           - Người dùng hiện đang hỏi về phần nào của quy trình
           - Các thông tin quan trọng cần ghi nhớ cho bước tiếp theo.
+          - Tối đa 1000 từ.
           Yêu cầu: Ngắn gọn, tập trung vào MỤC ĐÍCH và TIẾN TRÌNH. Không mô tả chi tiết.
           `
         },
@@ -347,6 +346,12 @@ export class ChatService {
     - Không suy diễn thêm thông tin.
     - Trả lời bằng tiếng Việt.
     - Không đề cập đến tài liệu nếu câu hỏi không liên quan.
+    QUY TẮC BẮT BUỘC:
+    1. Trả lời bằng tiếng Việt.
+    2. Trả lời Tối đa 200 từ.
+    3. SUMMARY:
+    - Tóm tắt nội dung chính của câu trả lời, không bao gồm câu hỏi.
+    - Tối đa 50 từ.
     --- CÂU HỎI ---
     ${question}
     --- TRẢ LỜI ---
@@ -356,6 +361,7 @@ export class ChatService {
 
   async information(question: string, context: string, chatSessionID: string) {
     const chunks = await this.getContext(question, chatSessionID, 8);
+    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
     const prompt = `
     Bạn là một trợ lý AI chuyên hỗ trợ sinh viên lập trình.
     Nhiệm vụ:
@@ -366,13 +372,18 @@ export class ChatService {
     - Không cung cấp code cụ thể.
     - Trả lời bằng tiếng Việt.
     - Trình bày rõ ràng, có cấu trúc nếu cần.
+    QUY TẮC BẮT BUỘC:
+    1. Trả lời bằng tiếng Việt.
+    2. Trả lời Tối đa 500 từ.
+    3. SUMMARY:
+    - Tóm tắt nội dung chính của câu trả lời, không bao gồm câu hỏi.
+    - Tối đa 100 từ.
     --- NGỮ CẢNH LIÊN QUAN ĐẾN CÂU HỎI ---
     ${chunks}
-    --- NGỮ CẢNH HỘI THOẠI TRƯỚC ĐÓ ĐÃ TÓM TẮT ---
-    ${context}
+    --- NGỮ CẢNH HỘI THOẠI TRƯỚC ĐÓ ---
+    ${conversationHistory}
     --- CÂU HỎI ---
     ${question}
-    --- TRẢ LỜI ---
     `
     return this.callLLM(prompt);
   }
@@ -394,14 +405,30 @@ export class ChatService {
             },
             required: ["question", "chatSessionID"]
           }
-        }]
+        },
+        {
+          name: "finalAnswer",
+          description: "Trả kết quả cuối cùng",
+          parameters: {
+            type: SchemaType.OBJECT,
+            properties: {
+              answer: { type: SchemaType.STRING },
+              summary: { type: SchemaType.STRING }
+            },
+            required: ["answer", "summary"]
+          }
+        }
+        ]
       }]
     });
     const max_step = 2
     let memory = ""
     const chat = model.startChat()
+    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
     let prompt = `
-      Bạn là AI reasoning có thể gọi function getContext.
+      Bạn là AI reasoning có thể gọi các function:
+        - getContext: lấy thêm ngữ cảnh từ cơ sở dữ liệu.
+        - finalAnswer: trả kết quả cuối cùng cho người dùng.
       LUẬT BẮT BUỘC:
       1. Trước khi quyết định FINAL, phải tự kiểm tra:
         - Đã xác định đầy đủ tất cả biến cần thiết chưa?
@@ -411,21 +438,23 @@ export class ChatService {
         - BẮT BUỘC gọi function getContext.
         - Không được suy đoán.
         - Không được sử dụng kiến thức ngoài ngữ cảnh.
-      3. Nếu đã đủ thông tin:
-        - Trả lời FINAL.
-        - Phải trình bày rõ:
-            + Mapping biến
-            + Công thức
-            + Các bước tính
-            + Kết quả
-      4. Không được vừa trả lời FINAL vừa gọi function.
-      5. Nếu trả lời FINAL:
-        - Phải có cảnh báo: "Kết quả có thể sai sót, vui lòng xác thực lại với giảng viên hoặc người phụ trách."
+      3. Nếu đã đủ thông tin để trả lời:
+        - BẮT BUỘC gọi function finalAnswer để trả kết quả cuối cùng cho người dùng.
+        - Truyền tham số:
+        {
+          answer: "câu trả lời đầy đủ cho người dùng, tối đa 500 từ",
+          summary: "tóm tắt câu trả lời để lưu lịch sử hội thoại, tối đa 100 từ"
+        }
+        - Phải có cảnh báo trong phần answer: "Kết quả có thể sai sót, vui lòng xác thực lại với giảng viên hoặc người phụ trách."
+      4. Không được vừa gọi getContext và finalAnswer cùng lúc.
+      5. Không được trả về text không, chỉ được trả về kết quả cuối cùng thông qua function finalAnswer.
       6. Trả lời bằng tiếng Việt.
       Câu hỏi:
       ${question}
-      Ngữ cảnh hiện tại:
+      Ngữ cảnh cho câu hỏi hiện tại:
       ${chunks}
+      Ngữ cảnh hội thoại trước đó:
+      ${conversationHistory}
     `
     let result = await chat.sendMessage(prompt);
     const maxStep = 2;
@@ -437,9 +466,8 @@ export class ChatService {
       }
       const toolResponses = [];
       for (const call of calls) {
-        console.log("call")
-        console.log(call)
         if (call.name === "getContext") {
+          console.log("getContext")
           const contextData = await this.getContext(call.args["question"], call.args["chatSessionID"]);
           toolResponses.push({
             functionResponse: {
@@ -447,16 +475,22 @@ export class ChatService {
               response: { content: contextData }
             }
           });
+        } else if (call.name === "finalAnswer") {
+          console.log("finalAnswer")
+          return {
+            answer: call.args["answer"],
+            summary: call.args["summary"],
+          }
         }
       }
       result = await chat.sendMessage(toolResponses);
     }
-    console.log(memory)
     return memory;
   }
 
   async problem_solving(question: string, context: string, chatSessionID: string, k: number = 8) {
     const chunks = await this.getContext(question, chatSessionID, k);
+    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
     const prompt = `
     Bạn là một trợ lý AI chuyên giải các bài toán tính toán và suy luận trong bài tập lớn (BTL).
     Nhiệm vụ của bạn:
@@ -470,9 +504,9 @@ export class ChatService {
     2. KIỂM TRA RÀNG BUỘC
     Trước khi tính:
     - Tìm trong tài liệu:
-      + Giới hạn min/max của từng biến
-      + Quy tắc làm tròn (nếu có)
-      + Điều kiện dừng vòng lặp (nếu có)
+      + Giới hạn của biến
+      + Quy tắc tinh toán
+      + Điều kiện tính toán
     - Nếu giá trị vượt giới hạn → điều chỉnh đúng theo mô tả.
     - Không tự ý làm tròn nếu tài liệu không yêu cầu.
     3. THỰC HIỆN TÍNH TOÁN
@@ -488,30 +522,40 @@ export class ChatService {
     5. Nếu tài liệu không cung cấp đủ thông tin để tính toán chính xác → trả lời:
     "Không đủ dữ kiện trong tài liệu để xác định kết quả."
     6. Trả lời bằng tiếng Việt.
+    7. TRẢ LỜI
+    - Tối đa 500 từ.
+    8. SUMMARY
+    - Tóm tắt nội dung chính của câu trả lời.
+    - Tối đa 100 từ.
     ----------------------
     --- NGỮ CẢNH LIÊN QUAN ĐẾN CÂU HỎI ---
     ${chunks}
-    --- NGỮ CẢNH HỘI THOẠI TRƯỚC ĐÓ ĐÃ TÓM TẮT ---
-    ${context}
+    --- NGỮ CẢNH HỘI THOẠI TRƯỚC ĐÓ ---
+    ${conversationHistory}
     --- CÂU HỎI ---
     ${question}
-    --- TRẢ LỜI ---
-    Bắt buộc theo bố cục:
-    Câu trả lời:
-    ...
-    Giải thích:
-    ...
-    Kết luận:
-    ...
     `
     return await this.callLLM(prompt);
   }
 
   async callLLM(prompt: string) {
     console.log("call LLM")
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = this.genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            answer: { type: SchemaType.STRING },
+            summary: { type: SchemaType.STRING }
+          },
+          required: ["answer", "summary"]
+        }
+      }
+    });
     const result = await model.generateContent(prompt);
-    return result.response.text();
+    return JSON.parse(result.response.text());
   }
 
   async switchIntent(object: { intent: string, question: string, level: string }, context: string, chatSessionID: string) {
@@ -527,7 +571,7 @@ export class ChatService {
           return await this.problem_solving(object.question, context, chatSessionID, 8);
         } else if (object.level === "MEDIUM") {
           console.log("problem solving medium")
-          return await this.problem_solving(object.question, context, chatSessionID);
+          return await this.problem_solving(object.question, context, chatSessionID, 16);
         } else if (object.level === "HARD") {
           console.log("problem solving hard")
           return await this.reasoning(object.question, context, chatSessionID);
