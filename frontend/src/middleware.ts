@@ -8,7 +8,7 @@ export function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Danh sách route cần bảo vệ
-  const protectedRoutes = ["/files", "/chat", "/profile"];
+  const protectedRoutes = ["/files", "/chat", "/profile", "/dashboard"];
   const publicRoutes = ["/login", "/register"];
 
   // Nếu người dùng đã đăng nhập và cố gắng truy cập trang công khai, chuyển hướng họ đến trang chính
@@ -20,7 +20,10 @@ export function middleware(req: NextRequest) {
   }
 
   // Neu nguoi dung chua dang nhap, chuyen huong den trang login
-  if (protectedRoutes.some((path) => pathname.startsWith(path)) || pathname === "/") {
+  if (
+    protectedRoutes.some((path) => pathname.startsWith(path)) ||
+    pathname === "/"
+  ) {
     if (!refreshToken && !accessToken) {
       const loginUrl = new URL("/login", req.url);
       return NextResponse.redirect(loginUrl);

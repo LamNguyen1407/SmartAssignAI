@@ -25,7 +25,7 @@ import { AuthJwtGuard } from '../guards/jwt.guard';
 
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) { }
+  constructor(private readonly chatService: ChatService) {}
 
   // upload:
   // + nhận file? + userID + chatSessionID? từ frontend
@@ -124,24 +124,48 @@ export class ChatController {
     };
   }
 
-  // @UseGuards(AuthJwtGuard)
+  @UseGuards(AuthJwtGuard)
   @Post('/question')
   async getAnswer(@Body() createQuestion: CreateQuestionDto, @Req() req) {
     try {
-      let chatSessionID = createQuestion.chatSessionID ? createQuestion.chatSessionID : (await this.chatService.createChatSession(createQuestion.question, req.userID))._id.toString();
-      let shortTermMessages = await this.chatService.getMessagesBySession(chatSessionID, 0, 10);
-      let shortTermMess = shortTermMessages.map(m => {
-        if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
-        else return 'bot: ' + m.summary;
-      }).join('\n');
-      let longTermMessages = await this.chatService.getMessagesBySession(chatSessionID, 11, 20);
-      let longTermMess = longTermMessages.map(m => {
-        if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
-        else return 'bot: ' + m.summary;
-      }).join('\n');
-      if (longTermMess.length > 1000) { longTermMess = await this.chatService.summaryContext(longTermMess); }
-      let history = `10 tin nhắn gần nhất: ${shortTermMess}\nNgữ cảnh 10 tin nhắn tiếp theo đã tóm tắt: ${longTermMess}`
-      let question = await this.chatService.rewriteQuestion(createQuestion.question, longTermMess);
+      let chatSessionID = createQuestion.chatSessionID
+        ? createQuestion.chatSessionID
+        : (
+            await this.chatService.createChatSession(
+              createQuestion.question,
+              req.user,
+            )
+          )._id.toString();
+      let shortTermMessages = await this.chatService.getMessagesBySession(
+        chatSessionID,
+        0,
+        10,
+      );
+      let shortTermMess = shortTermMessages
+        .map((m) => {
+          if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+          else return 'bot: ' + m.summary;
+        })
+        .join('\n');
+      let longTermMessages = await this.chatService.getMessagesBySession(
+        chatSessionID,
+        11,
+        20,
+      );
+      let longTermMess = longTermMessages
+        .map((m) => {
+          if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+          else return 'bot: ' + m.summary;
+        })
+        .join('\n');
+      if (longTermMess.length > 1000) {
+        longTermMess = await this.chatService.summaryContext(longTermMess);
+      }
+      let history = `10 tin nhắn gần nhất: ${shortTermMess}\nNgữ cảnh 10 tin nhắn tiếp theo đã tóm tắt: ${longTermMess}`;
+      let question = await this.chatService.rewriteQuestion(
+        createQuestion.question,
+        longTermMess,
+      );
       // let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 0, 10);
       // let mess = mess_10.map(m => {
       //   if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.contextContent;
@@ -149,13 +173,20 @@ export class ChatController {
       // }).join('\n');
       // mess = await this.chatService.summaryContext(mess) ? mess : '';
       // let question = await this.chatService.rewriteQuestion(createQuestion.question, mess);
-      let intent = await this.chatService.classifyQuestion(question, chatSessionID);
-      intent = JSON.parse(intent)
-      console.log(intent)
+      let intent = await this.chatService.classifyQuestion(
+        question,
+        chatSessionID,
+      );
+      intent = JSON.parse(intent);
+      console.log(intent);
       // let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, mess, chatSessionID);
-      let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, history, chatSessionID);
-      console.log("answer")
-      console.log(typeof answer)
+      let answer = await this.chatService.switchIntent(
+        { intent: intent['intent'], question, level: intent['level'] },
+        history,
+        chatSessionID,
+      );
+      console.log('answer');
+      console.log(typeof answer);
       await this.chatService.createMessage({
         sessionId: chatSessionID,
         type: MessageType.USER,
@@ -174,12 +205,13 @@ export class ChatController {
         answer: answer.answer ? answer.answer : '',
         chatSessionID,
       };
+
       // const embeddings = await this.chatService.embeddings([question]);
       // const vectors = await this.chatService.queryVector(embeddings[0], 18, chatSessionID);
       // const text = vectors?.map(vector => vector.text).join(' ');
       // const prompt = `
-      //   Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL). 
-      //   Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI. 
+      //   Bạn là một trợ lý AI chuyên giúp sinh viên lập trình và giải thích bài tập lớn (BTL).
+      //   Nhiệm vụ của bạn là dựa vào NGỮ CẢNH (các đoạn trích từ tài liệu) để trả lời CÂU HỎI.
       //   Hãy tuân theo quy tắc sau:
 
       //   1. Ngữ cảnh có thể chứa mô tả về cấu trúc file đầu vào (input_file), ví dụ như:
