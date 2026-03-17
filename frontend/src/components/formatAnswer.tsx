@@ -1,49 +1,83 @@
-// src/utils/formatAnswer.tsx
 import React from "react"
+
+function parseInline(text: string) {
+  return text.split(/(\*\*.*?\*\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**") ? (
+      <strong key={i}>{part.slice(2, -2)}</strong>
+    ) : (
+      part
+    )
+  )
+}
 
 export function formatAnswer(text: string) {
   if (!text) return null
 
-  // Tách theo newline
   const lines = text.split("\n").map(line => line.trim())
 
-  return (
-    <div className="space-y-2">
-      {lines.map((line, index) => {
-        if (!line) return <div key={index} className="h-2" /> // dòng trống = cách dòng
+  const elements: React.ReactNode[] = []
+  let i = 0
 
-        // Nếu là bullet (- hoặc * hoặc số)
-        if (/^[-*]\s+/.test(line)) {
-          return (
-            <ul key={index} className="list-disc pl-6">
-              <li>{line.replace(/^[-*]\s+/, "")}</li>
-            </ul>
-          )
-        }
+  while (i < lines.length) {
+    const line = lines[i]
 
-        if (/^\d+\.\s+/.test(line)) {
-          return (
-            <ol key={index} className="list-decimal pl-6">
-              <li>{line.replace(/^\d+\.\s+/, "")}</li>
-            </ol>
-          )
-        }
+    if (!line) {
+      elements.push(<div key={i} className="h-2" />)
+      i++
+      continue
+    }
 
-        // Xử lý in đậm **text**
-        const bolded = line.split(/(\*\*.*?\*\*)/g).map((part, i) =>
-          part.startsWith("**") && part.endsWith("**") ? (
-            <strong key={i}>{part.slice(2, -2)}</strong>
-          ) : (
-            part
-          )
+    // ===== UNORDERED LIST =====
+    if (/^[-*]\s+/.test(line)) {
+      const items = []
+
+      while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
+        items.push(
+          <li key={i}>
+            {parseInline(lines[i].replace(/^[-*]\s+/, ""))}
+          </li>
         )
+        i++
+      }
 
-        return (
-          <p key={index} className="leading-relaxed">
-            {bolded}
-          </p>
+      elements.push(
+        <ul key={`ul-${i}`} className="list-disc pl-6 space-y-1">
+          {items}
+        </ul>
+      )
+      continue
+    }
+
+    // ===== ORDERED LIST =====
+    if (/^\d+\.\s+/.test(line)) {
+      const items = []
+
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+        items.push(
+          <li key={i}>
+            {parseInline(lines[i].replace(/^\d+\.\s+/, ""))}
+          </li>
         )
-      })}
-    </div>
-  )
+        i++
+      }
+
+      elements.push(
+        <ol key={`ol-${i}`} className="list-decimal pl-6 space-y-1">
+          {items}
+        </ol>
+      )
+      continue
+    }
+
+    // ===== PARAGRAPH =====
+    elements.push(
+      <p key={i} className="leading-relaxed">
+        {parseInline(line)}
+      </p>
+    )
+
+    i++
+  }
+
+  return <div className="space-y-2">{elements}</div>
 }
