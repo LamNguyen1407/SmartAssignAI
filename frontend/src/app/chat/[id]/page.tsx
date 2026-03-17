@@ -17,6 +17,9 @@ import { ChatWithAI, getMessagesBySession } from "@/services/chat.service"
 import { formatAnswer } from "@/components/formatAnswer"
 import ChatSidebar from "@/components/chat/ChatSidebar"
 import { useParams } from "next/navigation"
+import Markdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeHighlight from "rehype-highlight"
 
 
 export default function ChatPage() {
@@ -355,8 +358,12 @@ useEffect(() => {
                       )}
                     >
                       <div className={cn("text-sm leading-relaxed", message.type === "system" && "text-amber-800")}>
-                        {formatAnswer(message.content)}
+                        {/* {formatAnswer(message.content)} */}
+                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                          {message.content}
+                        </Markdown>
                       </div>
+
                       <p
                         className={cn(
                           "text-xs mt-2 opacity-70",
