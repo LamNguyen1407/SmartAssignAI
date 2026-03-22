@@ -18,6 +18,9 @@ import { formatAnswer } from "@/components/formatAnswer"
 import ChatSidebar from "@/components/chat/ChatSidebar"
 import { useRouter } from "next/navigation"
 import { toast } from "react-toastify"
+import Markdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import rehypeHighlight from "rehype-highlight"
 
 
 export default function ChatPage() {
@@ -314,7 +317,9 @@ export default function ChatPage() {
                       )}
                     >
                       <div className={cn("text-sm leading-relaxed", message.type === "system" && "text-amber-800")}>
-                        {formatAnswer(message.content)}
+                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                                                  {message.content}
+                                                </Markdown>
                       </div>
                       <p
                         className={cn(
