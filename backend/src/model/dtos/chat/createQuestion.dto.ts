@@ -8,4 +8,8 @@ export class CreateQuestionDto {
   @IsString()
   @IsOptional()
   chatSessionID?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  courseId: string;
 }

@@ -5,8 +5,11 @@ export type MetadataDocument = Metadata & Document;
 
 @Schema()
 export class Metadata {
-    @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "ChatSession" })
-    ChatSessionID: string;
+    // @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "ChatSession" })
+    // ChatSessionID: string;
+
+    @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "Course" })
+    courseId: string;
 
     @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "DocumentFile" })
     fileId: string;
