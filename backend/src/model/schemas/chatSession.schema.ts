@@ -5,6 +5,9 @@ export type ChatSessionDocument = ChatSession & Document;
 
 @Schema({ timestamps: true })
 export class ChatSession {
+  @Prop({ required: true, type: mongoose.Types.ObjectId, ref: "Course" })
+  courseId: string;
+
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
   userId: string;
 
@@ -22,17 +25,17 @@ export class ChatSession {
 export const ChatSessionSchema = SchemaFactory.createForClass(ChatSession);
 
 ChatSessionSchema.pre('findOneAndDelete', async function (next) {
-  try{
+  try {
     const sessionId = this.getFilter()['_id'];
-    if(!sessionId) return next();
+    if (!sessionId) return next();
     await Promise.all([
       mongoose.model('Message').deleteMany({ sessionId }),
       mongoose.model('DocumentFile').deleteMany({ sessionId }),
       mongoose.model('Metadata').deleteMany({ ChatSessionID: sessionId }),
     ])
-  next();
+    next();
   }
-  catch(err){
+  catch (err) {
     next(err);
   }
 });

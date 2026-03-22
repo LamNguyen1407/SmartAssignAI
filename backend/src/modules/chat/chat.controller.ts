@@ -25,7 +25,7 @@ import { AuthJwtGuard } from '../guards/jwt.guard';
 
 @Controller('chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService) { }
 
   // upload:
   // + nhận file? + userID + chatSessionID? từ frontend
@@ -37,28 +37,31 @@ export class ChatController {
   @Post('semantic-chunk')
   @UseInterceptors(FileInterceptor('file'))
   async semanticChunk(
-    @Body() body: { userID: any; chatSessionID?: any },
+    @Body() body: { userID: any; courseId: any },
     @UploadedFile() file?: Express.Multer.File,
   ) {
     try {
-      let chatSession = null;
-      if (body.chatSessionID) {
-        chatSession = await this.chatService.findOne(body.chatSessionID);
-      } else {
-        chatSession = await this.chatService.create({
-          userID: body.userID,
-          title: file?.originalname,
-        });
-      }
+      // let chatSession = null;
+      // if (body.chatSessionID) {
+      //   chatSession = await this.chatService.findOne(body.chatSessionID);
+      // } else {
+      //   chatSession = await this.chatService.create({
+      //     userID: body.userID,
+      //     title: file?.originalname,
+      //   });
+      // }
+      console.log(file)
       if (file) {
         const documentFile = await this.chatService.create_documentFile({
+          courseId: body.courseId,
           filename: file.originalname,
           url: '',
           mimetype: file.mimetype,
           size: file.size,
           userId: body.userID,
-          sessionId: chatSession._id.toString(),
+          // sessionId: chatSession._id.toString(),
         });
+        console.log("run here");
         const form = new FormData();
         form.append('file', file.buffer, file.originalname);
         const respone = await axios.post(process.env.API_HANDLE_FILE, form, {
@@ -66,7 +69,8 @@ export class ChatController {
         });
         const data = respone.data.map((item: any) => ({
           ...item,
-          ChatSessionID: chatSession._id.toString(),
+          // ChatSessionID: chatSession._id.toString(),
+          courseId: body.courseId,
           fileId: documentFile._id.toString(),
         }));
         await this.chatService.create_many(data);
@@ -74,6 +78,20 @@ export class ChatController {
       return { message: 'File uploaded successfully' };
     } catch (error) {
       return { message: 'File upload failed', error: error.message };
+    }
+  }
+
+  @Post('test')
+  async createCourse(
+    @Body() body: { name: string },
+  ) {
+    try {
+      await this.chatService.createCourse({ name: body.name });
+      return {
+        message: 'Course create successfully',
+      };
+    } catch (error) {
+      return { message: 'Course created faild', error: error.message };
     }
   }
 
@@ -87,6 +105,7 @@ export class ChatController {
       if (!req.user) throw new Error('User not found');
       const chatSession = await this.chatService.createChatSession(
         createChatSessionDto.firstMessage,
+        createChatSessionDto.courseId,
         req.user,
       );
       return {
@@ -131,59 +150,61 @@ export class ChatController {
       let chatSessionID = createQuestion.chatSessionID
         ? createQuestion.chatSessionID
         : (
-            await this.chatService.createChatSession(
-              createQuestion.question,
-              req.user,
-            )
-          )._id.toString();
-      let shortTermMessages = await this.chatService.getMessagesBySession(
-        chatSessionID,
-        0,
-        10,
-      );
-      let shortTermMess = shortTermMessages
-        .map((m) => {
-          if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
-          else return 'bot: ' + m.summary;
-        })
-        .join('\n');
-      let longTermMessages = await this.chatService.getMessagesBySession(
-        chatSessionID,
-        11,
-        20,
-      );
-      let longTermMess = longTermMessages
-        .map((m) => {
-          if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
-          else return 'bot: ' + m.summary;
-        })
-        .join('\n');
-      if (longTermMess.length > 1000) {
-        longTermMess = await this.chatService.summaryContext(longTermMess);
+          await this.chatService.createChatSession(
+            createQuestion.question,
+            createQuestion.courseId,
+            req.user,
+          )
+        )._id.toString();
+      let history = "";
+      let shortTermMess = "";
+      if (createQuestion.chatSessionID) {
+        let shortTermMessages = await this.chatService.getMessagesBySession(
+          chatSessionID,
+          0,
+          10,
+        );
+        shortTermMess = shortTermMessages
+          .map((m) => {
+            if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+            else return 'bot: ' + m.summary;
+          })
+          .join('\n');
+        let longTermMessages = await this.chatService.getMessagesBySession(
+          chatSessionID,
+          11,
+          20,
+        );
+        let longTermMess = longTermMessages
+          .map((m) => {
+            if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+            else return 'bot: ' + m.summary;
+          })
+          .join('\n');
+        if (longTermMess.length > 1000) {
+          longTermMess = await this.chatService.summaryContext(longTermMess);
+        }
+        history = `10 tin nhắn gần nhất: ${shortTermMess}\nNgữ cảnh 10 tin nhắn tiếp theo đã tóm tắt: ${longTermMess}`;
       }
-      let history = `10 tin nhắn gần nhất: ${shortTermMess}\nNgữ cảnh 10 tin nhắn tiếp theo đã tóm tắt: ${longTermMess}`;
-      let question = await this.chatService.rewriteQuestion(
-        createQuestion.question,
-        longTermMess,
-      );
-      // let mess_10 = await this.chatService.getMessagesBySession(chatSessionID, 0, 10);
-      // let mess = mess_10.map(m => {
-      //   if (m.type === MessageType.USER) return 'Câu hỏi: ' + m.contextContent;
-      //   else return 'Trả lời: ' + m.content;
-      // }).join('\n');
-      // mess = await this.chatService.summaryContext(mess) ? mess : '';
-      // let question = await this.chatService.rewriteQuestion(createQuestion.question, mess);
+      let question = createQuestion.question
+      if (shortTermMess) {
+        question = await this.chatService.rewriteQuestion(
+          createQuestion.question,
+          shortTermMess,
+        );
+      }
       let intent = await this.chatService.classifyQuestion(
         question,
-        chatSessionID,
+        // chatSessionID,
+        createQuestion.courseId
       );
       intent = JSON.parse(intent);
       console.log(intent);
-      // let answer = await this.chatService.switchIntent({ intent: intent["intent"], question, level: intent["level"] }, mess, chatSessionID);
       let answer = await this.chatService.switchIntent(
         { intent: intent['intent'], question, level: intent['level'] },
         history,
-        chatSessionID,
+        // chatSessionID,
+        createQuestion.courseId
       );
       console.log('answer');
       console.log(typeof answer);

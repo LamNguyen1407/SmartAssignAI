@@ -3,6 +3,9 @@ import mongoose, { Document } from "mongoose";
 
 @Schema({ timestamps: true })
 export class DocumentFile extends Document {
+    @Prop({ required: true, type: mongoose.Types.ObjectId, ref: 'Course' })
+    courseId: string;
+
     @Prop({ required: true })
     filename: string;
 
@@ -19,8 +22,8 @@ export class DocumentFile extends Document {
     userId: string;
 
     // Optional → link tới ChatSession
-    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession' })
-    sessionId?: string;
+    // @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession' })
+    // sessionId?: string;
 }
 
 export const DocumentFileSchema = SchemaFactory.createForClass(DocumentFile);
