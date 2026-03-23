@@ -11,15 +11,17 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Send, Upload, Bot, User, FileText, Menu, Plus } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { Message, MessageType } from "@/interface/chat.interface"
+import { ChatSession, Message, MessageType } from "@/interface/chat.interface"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { ChatWithAI, getMessagesBySession } from "@/services/chat.service"
+import { ChatWithAI, fetchChatSessionById, getMessagesBySession } from "@/services/chat.service"
 import { formatAnswer } from "@/components/formatAnswer"
 import ChatSidebar from "@/components/chat/ChatSidebar"
 import { useParams } from "next/navigation"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
+import rehypeRaw from "rehype-raw"
+import { toast } from "react-toastify"
 
 
 export default function ChatPage() {
@@ -30,6 +32,14 @@ export default function ChatPage() {
     queryKey: ["chatMessages", sessionId],
     queryFn: async () => {
       const res = await getMessagesBySession(sessionId);
+      return res.data;
+    },
+  })
+
+  const {data: chatSessionData, isLoading: isChatSessionDataLoading} = useQuery<ChatSession>({
+    queryKey: ["chatSessionData", sessionId],
+    queryFn: async () => {
+      const res = await fetchChatSessionById(sessionId);
       return res.data;
     },
   })
@@ -61,7 +71,7 @@ export default function ChatPage() {
   }, [messages])
 
   const {mutate: ChatWithAIMutation, isPending: isChatWithAIMutationPending} = useMutation({
-    mutationFn: (data: string) => ChatWithAI(data, sessionId),
+    mutationFn: ({question, courseId}: {question: string, courseId: string  }) => ChatWithAI(question, courseId, sessionId),
     onSuccess: (data) => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -85,6 +95,13 @@ export default function ChatPage() {
   const handleSendMessage = () => {
     if (!inputValue.trim() || isChatWithAIMutationPending) return
 
+    const courseId = chatSessionData?.courseId;
+
+    if (!courseId) {
+      toast.error("Course not ready. Please wait...");
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       type: MessageType.USER,
@@ -94,7 +111,10 @@ export default function ChatPage() {
 
     setMessages((prev) => [...prev, userMessage])
 
-    ChatWithAIMutation(inputValue)
+    ChatWithAIMutation({
+      question: inputValue,
+      courseId: courseId
+    })
 
     setInputValue("")
   }
@@ -165,6 +185,10 @@ export default function ChatPage() {
 useEffect(() => {
   console.log("messages", messages)
 },[messages])
+
+useEffect(() => {
+  console.log("chatSessionData", chatSessionData)
+}, [chatSessionData])
 
 
 
@@ -359,7 +383,7 @@ useEffect(() => {
                     >
                       <div className={cn("text-sm leading-relaxed", message.type === "system" && "text-amber-800")}>
                         {/* {formatAnswer(message.content)} */}
-                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight, rehypeRaw]}>
                           {message.content}
                         </Markdown>
                       </div>
@@ -420,7 +444,7 @@ useEffect(() => {
                       onKeyPress={handleKeyPress}
                       placeholder="Ask a question about your documents..."
                       className="min-h-[60px] max-h-32 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      disabled={isChatWithAIMutationPending}
+                      disabled={isChatWithAIMutationPending || isChatSessionDataLoading || !chatSessionData?.courseId}
                     />
                   </div>
 

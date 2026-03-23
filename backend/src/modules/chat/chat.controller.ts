@@ -134,6 +134,21 @@ export class ChatController {
   }
 
   @UseGuards(AuthJwtGuard)
+  @Get('get-session-by-id/:chatSessionID')
+  async getChatSessionByID(@Param('chatSessionID') chatSessionID: string) {
+    try {
+      const chatSession = await this.chatService.getChatSessionByID(chatSessionID);
+      return {
+        message: 'Chat session get successfully',
+        data: chatSession,
+      };
+    } catch (error) {
+      console.log(error);
+      throw new Error('Chat session get failed');
+    }
+  }
+
+  @UseGuards(AuthJwtGuard)
   @Get('get-messages/:chatSessionID')
   async getMessages(@Param('chatSessionID') chatSessionID: string) {
     const messages = await this.chatService.getMessagesBySession(chatSessionID);
