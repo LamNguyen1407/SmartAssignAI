@@ -15,7 +15,7 @@ import { Message, MessageDocument } from 'src/model/schemas/message.schema';
 import { MessageType } from 'src/interface/type';
 import { SchemaType } from '@google/generative-ai';
 import Groq from 'groq-sdk';
-import { FunctionCallingMode } from "@google/generative-ai";
+import { FunctionCallingMode } from '@google/generative-ai';
 import { Course, CourseDocument } from 'src/model/schemas/course.schema';
 
 @Injectable()
@@ -29,15 +29,12 @@ export class ChatService {
     private documentFileModel: Model<DocumentFile>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
     @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
-
-  ) { }
+  ) {}
 
   private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   private groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  async createCourse(objs: {
-    name: string,
-  }) {
+  async createCourse(objs: { name: string }) {
     return await new this.courseModel({
       name: objs.name,
     }).save();
@@ -59,7 +56,11 @@ export class ChatService {
     }).save();
   }
 
-  async getMessagesBySession(sessionId: string, start: number = 0, end: number = 0) {
+  async getMessagesBySession(
+    sessionId: string,
+    start: number = 0,
+    end: number = 0,
+  ) {
     const session = await this.chatSessionModel.findById(sessionId).exec();
     if (!session) {
       throw new NotFoundException('Chat session not found');
@@ -86,7 +87,7 @@ export class ChatService {
   }
 
   async create_documentFile(objs: {
-    courseId: string,
+    courseId: string;
     filename: string;
     url: string;
     mimetype: string;
@@ -117,7 +118,11 @@ export class ChatService {
     }).save();
   }
 
-  async createChatSession(firstMessage: string, courseId: string, userId: string) {
+  async createChatSession(
+    firstMessage: string,
+    courseId: string,
+    userId: string,
+  ) {
     const title = await generateTitleFromAI(firstMessage);
     return await this.create({ userID: userId, courseId: courseId, title });
   }
@@ -130,6 +135,10 @@ export class ChatService {
     return chatSession;
   }
 
+  async getChatSessionByID(id: string) {
+    return await this.chatSessionModel.findById(id).exec();
+  }
+
   async saveChatSession(chatSession: ChatSessionDocument) {
     return await chatSession.save();
   }
@@ -139,7 +148,7 @@ export class ChatService {
       {
         $vectorSearch: {
           filter: {
-            courseId: courseId
+            courseId: courseId,
           },
           index: 'vector_index',
           path: 'embedding',
@@ -152,9 +161,9 @@ export class ChatService {
         $project: {
           _id: 1,
           text: 1,
-          score: { $meta: "vectorSearchScore" }
-        }
-      }
+          score: { $meta: 'vectorSearchScore' },
+        },
+      },
     ]);
     return result;
   }
@@ -163,46 +172,56 @@ export class ChatService {
     const keywordResults = await this.metadataModel.aggregate([
       {
         $search: {
-          index: "full_text_search",
+          index: 'full_text_search',
           compound: {
             must: [
               {
                 text: {
                   query: keyword,
-                  path: ["text", "metadata.H3"]
-                }
-              }
+                  path: ['text', 'metadata.H3'],
+                },
+              },
             ],
-            filter: [{ equals: { path: "courseId", value: courseId } }]
-          }
-        }
+            filter: [{ equals: { path: 'courseId', value: courseId } }],
+          },
+        },
       },
       { $limit: topK },
       {
         $project: {
           _id: 1,
           text: 1,
-          score: { $meta: "searchScore" }
-        }
-      }
+          score: { $meta: 'searchScore' },
+        },
+      },
     ]);
     return keywordResults;
   }
 
-  async combineChunks(arr1: { _id: any, text: string, score: number }[], arr2: { _id: any, text: string, score: number }[], topK: number) {
+  async combineChunks(
+    arr1: { _id: any; text: string; score: number }[],
+    arr2: { _id: any; text: string; score: number }[],
+    topK: number,
+  ) {
     const map = new Map();
     arr1.forEach((item, index) => {
-      map.set(item._id.toString(), { text: item.text, score: 1 / (index + 1 + 60) });
+      map.set(item._id.toString(), {
+        text: item.text,
+        score: 1 / (index + 1 + 60),
+      });
     });
     arr2.forEach((item, index) => {
       if (!map.has(item._id.toString())) {
-        map.set(item._id.toString(), { text: item.text, score: 1 / (index + 1 + 60) });
+        map.set(item._id.toString(), {
+          text: item.text,
+          score: 1 / (index + 1 + 60),
+        });
       } else {
         map.get(item._id.toString()).score += 1 / (index + 1 + 60);
       }
     });
-    const merged = Array.from(map.values())
-    merged.sort((a, b) => b.score - a.score)
+    const merged = Array.from(map.values());
+    merged.sort((a, b) => b.score - a.score);
     return merged.slice(0, topK);
   }
 
@@ -219,7 +238,7 @@ export class ChatService {
     const summaryResponse = await this.groq.chat.completions.create({
       messages: [
         {
-          role: "system",
+          role: 'system',
           content: `
           Bạn là một trợ lý AI đang tham gia vào một cuộc hội thoại nhiều bước.
           Nhiệm vụ của bạn: TÓM TẮT lại ngữ cảnh hội thoại theo cách giúp trợ lý hiểu được:
@@ -230,15 +249,15 @@ export class ChatService {
           - Các thông tin quan trọng cần ghi nhớ cho bước tiếp theo.
           - Tối đa 1000 từ.
           Yêu cầu: Ngắn gọn, tập trung vào MỤC ĐÍCH và TIẾN TRÌNH. Không mô tả chi tiết.
-          `
+          `,
         },
         {
-          role: "user",
-          content: `--- HỘI THOẠI ---\n${mess}\n--- TÓM TẮT NGỮ CẢNH ---`
-        }
+          role: 'user',
+          content: `--- HỘI THOẠI ---\n${mess}\n--- TÓM TẮT NGỮ CẢNH ---`,
+        },
       ],
-      model: "llama-3.1-8b-instant",
-      temperature: 0.1
+      model: 'llama-3.1-8b-instant',
+      temperature: 0.1,
     });
     const result = summaryResponse.choices[0].message.content;
     return result;
@@ -248,7 +267,7 @@ export class ChatService {
     const model = await this.groq.chat.completions.create({
       messages: [
         {
-          role: "system",
+          role: 'system',
           content: `
           Bạn là chuyên gia tái tạo truy vấn tìm kiếm.
           NHIỆM VỤ:
@@ -276,19 +295,19 @@ export class ChatService {
           7. Chỉ trả về duy nhất truy vấn cuối cùng.
             - Không giải thích.
             - Không thêm văn bản khác.
-          `
+          `,
         },
         {
-          role: "user",
+          role: 'user',
           content: `
           Tóm tắt hội thoại: ${context}
           Câu hỏi của người dùng: "${question}"
           Hãy tái tạo lại câu hỏi này:
-          `
-        }
+          `,
+        },
       ],
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.1
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.1,
     });
     const result = model.choices[0].message.content;
     return result;
@@ -299,7 +318,7 @@ export class ChatService {
     const model = await this.groq.chat.completions.create({
       messages: [
         {
-          role: "system",
+          role: 'system',
           content: `
           Bạn là bộ phân loại intent cho hệ thống AI hỗ trợ sinh viên làm bài tập lớn lập trình.
           - Nhiệm vụ của bạn là phân loại câu hỏi dựa trên:
@@ -326,19 +345,19 @@ export class ChatService {
             + Nếu không chắc chắn thì level = "MEDIUM".
             + Không giải thích.
             + Không thêm văn bản ngoài JSON.
-          `
+          `,
         },
         {
-          role: "user",
+          role: 'user',
           content: `
           Ngữ cảnh liên quan: ${context}
           Câu hỏi của người dùng: "${question}"
-          `
-        }
+          `,
+        },
       ],
-      model: "llama-3.3-70b-versatile",
-      response_format: { type: "json_object" },
-      temperature: 0.1
+      model: 'llama-3.3-70b-versatile',
+      response_format: { type: 'json_object' },
+      temperature: 0.1,
     });
     const result = model.choices[0].message.content;
     return result;
@@ -349,12 +368,15 @@ export class ChatService {
     const keywordResults = await this.queryKeyword(question, courseId, k);
     const vectorResults = await this.queryVector(embeddings[0], k, courseId);
     const chunks = await this.combineChunks(keywordResults, vectorResults, k);
-    const text = chunks?.map(chunk => chunk.text).join(' ');
+    const text = chunks?.map((chunk) => chunk.text).join(' ');
     return text;
   }
 
   async general(question: string, context: string) {
-    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
+    const conversationHistory =
+      context && context.trim() !== ''
+        ? context
+        : 'Không có lịch sử hội thoại trước đó.';
     const prompt = `
     Bạn là một trợ lý AI hỗ trợ sinh viên lập trình.
     Nhiệm vụ:
@@ -379,7 +401,10 @@ export class ChatService {
 
   async information(question: string, context: string, courseId: string) {
     const chunks = await this.getContext(question, courseId, 8);
-    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
+    const conversationHistory =
+      context && context.trim() !== ''
+        ? context
+        : 'Không có lịch sử hội thoại trước đó.';
     const prompt = `
     Bạn là một trợ lý AI chuyên hỗ trợ sinh viên lập trình.
     Nhiệm vụ:
@@ -402,7 +427,7 @@ export class ChatService {
     ${conversationHistory}
     --- CÂU HỎI ---
     ${question}
-    `
+    `;
     return this.callLLM(prompt);
   }
 
@@ -410,44 +435,58 @@ export class ChatService {
     const chunks = await this.getContext(question, courseId);
     const model = this.genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
-      tools: [{
-        functionDeclarations: [{
-          name: "getContext",
-          description: "Lấy các ngữ cảnh liên quan tới câu hỏi từ cơ sở dữ liệu",
-          parameters: {
-            type: SchemaType.OBJECT,
-            properties: {
-              question: { type: SchemaType.STRING, description: "Câu hỏi hoặc từ khóa cần tìm kiếm" },
-              courseId: { type: SchemaType.STRING },
-              k: { type: SchemaType.NUMBER, description: "Số lượng chunks muốn lấy, mỗi chunks 2000 token, overlap 400 token" }
-            },
-            required: ["question", "courseId"]
-          }
-        },
+      tools: [
         {
-          name: "finalAnswer",
-          description: "Trả kết quả cuối cùng",
-          parameters: {
-            type: SchemaType.OBJECT,
-            properties: {
-              answer: { type: SchemaType.STRING },
-              summary: { type: SchemaType.STRING }
+          functionDeclarations: [
+            {
+              name: 'getContext',
+              description:
+                'Lấy các ngữ cảnh liên quan tới câu hỏi từ cơ sở dữ liệu',
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  question: {
+                    type: SchemaType.STRING,
+                    description: 'Câu hỏi hoặc từ khóa cần tìm kiếm',
+                  },
+                  courseId: { type: SchemaType.STRING },
+                  k: {
+                    type: SchemaType.NUMBER,
+                    description:
+                      'Số lượng chunks muốn lấy, mỗi chunks 2000 token, overlap 400 token',
+                  },
+                },
+                required: ['question', 'courseId'],
+              },
             },
-            required: ["answer", "summary"]
-          }
-        }
-        ]
-      }],
+            {
+              name: 'finalAnswer',
+              description: 'Trả kết quả cuối cùng',
+              parameters: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  answer: { type: SchemaType.STRING },
+                  summary: { type: SchemaType.STRING },
+                },
+                required: ['answer', 'summary'],
+              },
+            },
+          ],
+        },
+      ],
       toolConfig: {
         functionCallingConfig: {
           mode: FunctionCallingMode.ANY,
-        }
-      }
+        },
+      },
     });
-    const max_step = 2
-    let memory = ""
-    const chat = model.startChat()
-    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
+    const max_step = 2;
+    let memory = '';
+    const chat = model.startChat();
+    const conversationHistory =
+      context && context.trim() !== ''
+        ? context
+        : 'Không có lịch sử hội thoại trước đó.';
     let prompt = `
     Bạn là AI bắt buộc phải sử dụng function để trả lời.
     Bạn có 2 function:
@@ -480,32 +519,35 @@ export class ChatService {
     Lịch sử:
     ${conversationHistory}
     courseId: ${courseId}
-      `
+      `;
     let result = await chat.sendMessage(prompt);
     const maxStep = 2;
     for (let i = 0; i < maxStep; i++) {
-      const calls = result.response.functionCalls()
+      const calls = result.response.functionCalls();
       if (!calls || calls.length === 0) {
         memory = result.response.text();
-        break
+        break;
       }
       const toolResponses = [];
       for (const call of calls) {
-        if (call.name === "getContext") {
-          console.log("getContext")
-          const contextData = await this.getContext(call.args["question"], call.args["courseId"]);
+        if (call.name === 'getContext') {
+          console.log('getContext');
+          const contextData = await this.getContext(
+            call.args['question'],
+            call.args['courseId'],
+          );
           toolResponses.push({
             functionResponse: {
-              name: "getContext",
-              response: { content: contextData }
-            }
+              name: 'getContext',
+              response: { content: contextData },
+            },
           });
-        } else if (call.name === "finalAnswer") {
-          console.log("finalAnswer")
+        } else if (call.name === 'finalAnswer') {
+          console.log('finalAnswer');
           return {
-            answer: call.args["answer"],
-            summary: call.args["summary"],
-          }
+            answer: call.args['answer'],
+            summary: call.args['summary'],
+          };
         }
       }
       result = await chat.sendMessage(toolResponses);
@@ -514,9 +556,17 @@ export class ChatService {
     return memory;
   }
 
-  async problem_solving(question: string, context: string, courseId: string, k: number = 8) {
+  async problem_solving(
+    question: string,
+    context: string,
+    courseId: string,
+    k: number = 8,
+  ) {
     const chunks = await this.getContext(question, courseId, k);
-    const conversationHistory = context && context.trim() !== "" ? context : "Không có lịch sử hội thoại trước đó.";
+    const conversationHistory =
+      context && context.trim() !== ''
+        ? context
+        : 'Không có lịch sử hội thoại trước đó.';
     const prompt = `
     Bạn là một trợ lý AI chuyên giải các bài toán tính toán và suy luận trong bài tập lớn (BTL).
     Nhiệm vụ của bạn:
@@ -561,55 +611,70 @@ export class ChatService {
     ${conversationHistory}
     --- CÂU HỎI ---
     ${question}
-    `
+    `;
     return await this.callLLM(prompt);
   }
 
   async callLLM(prompt: string) {
-    console.log("call LLM")
+    console.log('call LLM');
     const model = this.genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: {
-        responseMimeType: "application/json",
+        responseMimeType: 'application/json',
         responseSchema: {
           type: SchemaType.OBJECT,
           properties: {
             answer: { type: SchemaType.STRING },
-            summary: { type: SchemaType.STRING }
+            summary: { type: SchemaType.STRING },
           },
-          required: ["answer", "summary"]
-        }
-      }
+          required: ['answer', 'summary'],
+        },
+      },
     });
     let newPrompt = `
     ${prompt}
     PHONG CÁCH NGÔN NGỮ
     - Xưng hô thân thiện (Ví dụ: mình - bạn, hoặc gọi tên người dùng nếu biết).
     - Tránh trả lời quá máy móc. Nếu người dùng đang làm sai, hãy nhẹ nhàng chỉ ra điểm nhầm lẫn trước khi đưa ra con số đúng.
-    `
+    `;
     const result = await model.generateContent(prompt);
     return JSON.parse(result.response.text());
   }
 
-  async switchIntent(object: { intent: string, question: string, level: string }, context: string, courseId: string) {
-    console.log("switch intent")
+  async switchIntent(
+    object: { intent: string; question: string; level: string },
+    context: string,
+    courseId: string,
+  ) {
+    console.log('switch intent');
     switch (object.intent) {
-      case "GENERAL":
+      case 'GENERAL':
         return this.general(object.question, context);
-      case "INFORMATION":
+      case 'INFORMATION':
         return this.information(object.question, context, courseId);
-      case "PROBLEM_SOLVING":
-        if (object.level === "EASY") {
-          console.log("problem solving easy")
-          return await this.problem_solving(object.question, context, courseId, 8);
-        } else if (object.level === "MEDIUM") {
-          console.log("problem solving medium")
-          return await this.problem_solving(object.question, context, courseId, 16);
-        } else if (object.level === "HARD") {
-          console.log("problem solving hard")
+      case 'PROBLEM_SOLVING':
+        if (object.level === 'EASY') {
+          console.log('problem solving easy');
+          return await this.problem_solving(
+            object.question,
+            context,
+            courseId,
+            8,
+          );
+        } else if (object.level === 'MEDIUM') {
+          console.log('problem solving medium');
+          return await this.problem_solving(
+            object.question,
+            context,
+            courseId,
+            16,
+          );
+        } else if (object.level === 'HARD') {
+          console.log('problem solving hard');
           return await this.reasoning(object.question, context, courseId);
         }
-      default: return
+      default:
+        return;
     }
   }
 }

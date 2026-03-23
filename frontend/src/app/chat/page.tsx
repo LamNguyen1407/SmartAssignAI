@@ -21,6 +21,9 @@ import { toast } from "react-toastify"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
+import { fetchCourses } from "@/services/course.service"
+import { Course } from "@/interface/course.interface"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 
 export default function ChatPage() {
@@ -33,6 +36,8 @@ export default function ChatPage() {
       timestamp: new Date(),
     },
   ])
+
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -52,7 +57,7 @@ export default function ChatPage() {
   }, [messages])
 
   const {mutate: ChatWithAIMutation, isPending: isChatWithAIMutationPending} = useMutation({
-    mutationFn: (question: string) => ChatWithAI(question),
+    mutationFn: ({question, courseId}: {question: string, courseId: string}) => ChatWithAI(question, courseId),
     onSuccess: (data) => {
       router.push(`/chat/${data.data.chatSessionID}`);
     },
@@ -62,8 +67,18 @@ export default function ChatPage() {
     },
   })
 
+  const {data: courseData} = useQuery<Course[]>({
+    queryKey: ["course"],
+    queryFn: () => fetchCourses(),
+  })
+
   const handleSendMessage = () => {
     if (!inputValue.trim() || isChatWithAIMutationPending) return
+
+    if (!selectedCourseId) {
+      toast.error("Please select a course before asking questions.");
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -74,7 +89,10 @@ export default function ChatPage() {
 
     setMessages((prev) => [...prev, userMessage])
 
-    ChatWithAIMutation(inputValue)
+    ChatWithAIMutation({
+      question: inputValue,
+      courseId: selectedCourseId || "",
+    })
 
     setInputValue("")
   }
@@ -126,6 +144,9 @@ export default function ChatPage() {
     }
   }
 
+  useEffect(() => {
+    console.log("Selected course ID:", selectedCourseId);
+  }, [selectedCourseId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex flex-col lg:flex-row">
@@ -277,12 +298,36 @@ export default function ChatPage() {
 
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 p-6">
-              <h1 className="text-2xl font-bold text-gray-900">AI Assistant</h1>
-              <p className="text-gray-600">Ask questions about your uploaded documents</p>
-            </div>
+            <div className="bg-white border-b border-gray-200 p-6 flex justify-between items-center gap-6">
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">AI Assistant</h1>
+                <p className="text-gray-600">
+                  Ask questions about your assignments of selected course
+                </p>
+              </div>
 
+              {/* Course Selection */}
+              <div className="w-[260px]">
+                <Select
+                  value={selectedCourseId || ""}
+                  onValueChange={(value) => setSelectedCourseId(value)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={courseData ? "Select a course" : "Loading..."} />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {courseData?.map((course) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+           
             {/* Messages */}
             <ScrollArea className="flex-1 p-6 max-h-[calc(100vh-220px)]">
               <div className="max-w-4xl mx-auto space-y-4">
