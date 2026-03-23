@@ -13,7 +13,10 @@ export interface Message {
 
 export interface ChatSession {
   _id: string;
-  courseId: string;
+  courseId: {
+    _id: string;
+    name: string;
+  };
   userId: string;
   summaryContext?: string;
   documentId?: string;

@@ -130,13 +130,22 @@ export class ChatService {
   async getChatSession(userId: string) {
     const chatSession = await this.chatSessionModel
       .find({ userId })
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'courseId',
+        model: 'Course',
+        select: 'name',
+      })
       .exec();
+
     return chatSession;
   }
 
   async getChatSessionByID(id: string) {
-    return await this.chatSessionModel.findById(id).exec();
+    return await this.chatSessionModel
+      .findById(id)
+      .populate({ path: 'courseId', model: 'Course', select: 'name' })
+      .exec();
   }
 
   async saveChatSession(chatSession: ChatSessionDocument) {
