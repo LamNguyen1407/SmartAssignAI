@@ -113,7 +113,7 @@ export default function ChatPage() {
 
     ChatWithAIMutation({
       question: inputValue,
-      courseId: courseId
+      courseId: courseId._id
     })
 
     setInputValue("")

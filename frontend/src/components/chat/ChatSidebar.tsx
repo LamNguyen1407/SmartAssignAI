@@ -1,6 +1,6 @@
 "use client"
 
-import { MoveLeft, Plus } from "lucide-react";
+import { MessageSquare, MoveLeft, Plus } from "lucide-react";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
 import { Card } from "../ui/card";
@@ -39,12 +39,35 @@ export default function ChatSidebar() {
       </div>
 
       <ScrollArea className="flex-1 p-3 lg:p-4 max-h-[calc(100vh-64px)] scroll-auto">
-        <div className="space-y-2">
+        <div className="flex flex-col gap-3">
           {chatSessions.map((session) => (
-            <Link href={`/chat/${session._id}`}>
-                <Card  key={session._id} className="p-3 lg:p-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                <h3 className="font-medium text-gray-900 text-sm mb-1 truncate">{session.title}</h3>
-                <p className="text-xs text-gray-400">{new Date(session.createdAt).toLocaleDateString()}</p>
+            <Link href={`/chat/${session._id}`}>           
+              <Card
+                key={session._id}
+                className="group p-4 rounded-xl border border-gray-200 bg-white hover:shadow-md hover:border-blue-200 transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex gap-3">
+                  
+                  <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-1">
+                    <h3 className="font-semibold text-sm text-gray-900 line-clamp-1 group-hover:text-blue-600">
+                      {session.title}
+                    </h3>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">
+                        {session.courseId.name}
+                      </span>
+                      <span className="text-[11px] text-gray-400">
+                        {new Date(session.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
               </Card>
               </Link>
           ))}
