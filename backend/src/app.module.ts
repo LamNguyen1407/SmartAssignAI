@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { EmailService } from './modules/email/email.service';
+import { CourseModule } from './modules/course/course.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { EmailService } from './modules/email/email.service';
     }),
     AuthModule,
     ChatModule,
+    CourseModule,
   ],
   controllers: [AppController],
   providers: [AppService, EmailService],
