@@ -29,3 +29,9 @@ export const getMessagesBySession = async (chatSessionID: string) => {
     .get(`/chat/get-messages/${chatSessionID}`)
     .then((res) => res.data);
 };
+
+export const deleteChatSession = async (chatSessionID: string) => {
+  return await axiosClient
+    .delete(`/chat/deleteChatSession`, { data: { chatSessionID } })
+    .then((res) => res.data);
+}
