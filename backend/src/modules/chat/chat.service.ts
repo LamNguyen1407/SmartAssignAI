@@ -16,7 +16,6 @@ import { MessageType } from 'src/interface/type';
 import { SchemaType } from '@google/generative-ai';
 import Groq from 'groq-sdk';
 import { FunctionCallingMode } from '@google/generative-ai';
-import { Course, CourseDocument } from 'src/model/schemas/course.schema';
 
 @Injectable()
 export class ChatService {
@@ -28,16 +27,19 @@ export class ChatService {
     @InjectModel(DocumentFile.name)
     private documentFileModel: Model<DocumentFile>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
-    @InjectModel(Course.name) private courseModel: Model<CourseDocument>,
-  ) {}
+  ) { }
 
   private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   private groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  async createCourse(objs: { name: string }) {
-    return await new this.courseModel({
-      name: objs.name,
-    }).save();
+  async deleteChatSession(chatSessionID: string) {
+    const session = await this.chatSessionModel.findById(chatSessionID).exec();
+    if (!session) { return false }
+    await Promise.all([
+      this.chatSessionModel.findByIdAndDelete(chatSessionID).exec(),
+      this.messageModel.deleteMany({ sessionId: chatSessionID }).exec(),
+    ]);
+    return true;
   }
 
   async createMessage(objs: {

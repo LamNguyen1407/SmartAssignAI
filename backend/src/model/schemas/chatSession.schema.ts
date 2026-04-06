@@ -24,18 +24,18 @@ export class ChatSession {
 
 export const ChatSessionSchema = SchemaFactory.createForClass(ChatSession);
 
-ChatSessionSchema.pre('findOneAndDelete', async function (next) {
-  try {
-    const sessionId = this.getFilter()['_id'];
-    if (!sessionId) return next();
-    await Promise.all([
-      mongoose.model('Message').deleteMany({ sessionId }),
-      mongoose.model('DocumentFile').deleteMany({ sessionId }),
-      mongoose.model('Metadata').deleteMany({ ChatSessionID: sessionId }),
-    ])
-    next();
-  }
-  catch (err) {
-    next(err);
-  }
-});
+// ChatSessionSchema.pre('findOneAndDelete', async function (next) {
+//   try {
+//     const sessionId = this.getFilter()['_id'];
+//     if (!sessionId) return next();
+//     await Promise.all([
+//       mongoose.model('Message').deleteMany({ sessionId }),
+//       mongoose.model('DocumentFile').deleteMany({ sessionId }),
+//       mongoose.model('Metadata').deleteMany({ ChatSessionID: sessionId }),
+//     ])
+//     next();
+//   }
+//   catch (err) {
+//     next(err);
+//   }
+// });
