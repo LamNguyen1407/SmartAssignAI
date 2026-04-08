@@ -65,7 +65,7 @@ export class ChatController {
     @Body() createChatSessionDto: CreateChatSessionDto,
     @Req() req,
   ) {
-    if (!req.user) throw new Error('User not found');
+    if (!req.user.userId) throw new Error('User not found');
     const chatSession = await this.chatService.createChatSession(
       createChatSessionDto.firstMessage,
       createChatSessionDto.courseId,
@@ -80,8 +80,8 @@ export class ChatController {
   @UseGuards(AuthJwtGuard)
   @Get('get-chat-sessions')
   async getChatSession(@Req() req) {
-    if (!req.user) throw new Error('User not found');
-    const chatSession = await this.chatService.getChatSession(req.user);
+    if (!req.user.userId) throw new Error('User not found');
+    const chatSession = await this.chatService.getChatSession(req.user.userId);
     return {
       message: 'Chat session get successfully',
       data: chatSession,
@@ -114,7 +114,7 @@ export class ChatController {
     try {
       let chatSessionID = createQuestion.chatSessionID
         ? createQuestion.chatSessionID
-        : (await this.chatService.createChatSession(createQuestion.question, createQuestion.courseId, req.user,))._id.toString();
+        : (await this.chatService.createChatSession(createQuestion.question, createQuestion.courseId, req.user.userId,))._id.toString();
       let shortTermMess = await this.chatService.getShortTermMess(chatSessionID);
       let question = createQuestion.question
       if (shortTermMess) question = await this.chatService.rewriteQuestion(createQuestion.question, shortTermMess);
