@@ -88,11 +88,11 @@ export class ChatController {
     @Req() req,
   ) {
     // try {
-    if (!req.user) throw new Error('User not found');
+    if (!req.user.userId) throw new Error('User not found');
     const chatSession = await this.chatService.createChatSession(
       createChatSessionDto.firstMessage,
       createChatSessionDto.courseId,
-      req.user,
+      req.user.userId,
     );
     return {
       message: 'Chat session created successfully',
@@ -107,8 +107,8 @@ export class ChatController {
   @Get('get-chat-sessions')
   async getChatSession(@Req() req) {
     // try {
-    if (!req.user) throw new Error('User not found');
-    const chatSession = await this.chatService.getChatSession(req.user);
+    if (!req.user.userId) throw new Error('User not found');
+    const chatSession = await this.chatService.getChatSession(req.user.userId);
     return {
       message: 'Chat session get successfully',
       data: chatSession,
@@ -154,7 +154,7 @@ export class ChatController {
         await this.chatService.createChatSession(
           createQuestion.question,
           createQuestion.courseId,
-          req.user,
+          req.user.userId,
         )
       )._id.toString();
     let history = "";
