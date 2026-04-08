@@ -69,7 +69,7 @@ export class ChatController {
     const chatSession = await this.chatService.createChatSession(
       createChatSessionDto.firstMessage,
       createChatSessionDto.courseId,
-      req.user,
+      req.user.userId,
     );
     return {
       message: 'Chat session created successfully',

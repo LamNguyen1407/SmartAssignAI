@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UserLoginDto } from 'src/model/dtos/user/userLogin.dto';
 import { UserSignUpDto } from 'src/model/dtos/user/userSignUp.dto';
@@ -12,15 +21,18 @@ import { ResetPasswordDto } from 'src/model/dtos/user/resetPassword.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-
   @Post('signup')
-  async signUp(@Body() userSignUpDto: UserSignUpDto){
-    return this.authService.signUp(userSignUpDto)
+  async signUp(@Body() userSignUpDto: UserSignUpDto) {
+    return this.authService.signUp(userSignUpDto);
   }
 
   @Post('login')
-  async login(@Body() userLoginDto: UserLoginDto, @Res({ passthrough: true }) response: Response){
-    const {accessToken, refreshToken} = await this.authService.login(userLoginDto)
+  async login(
+    @Body() userLoginDto: UserLoginDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const { accessToken, refreshToken } =
+      await this.authService.login(userLoginDto);
 
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -41,9 +53,13 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) response: Response) {
+  async refreshTokens(
+    @Req() req: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const refreshToken = req.cookies['refreshToken'];
-    const {accessToken, refreshToken: newRefreshToken} = await this.authService.refreshTokens({token: refreshToken});
+    const { accessToken, refreshToken: newRefreshToken } =
+      await this.authService.refreshTokens({ token: refreshToken });
 
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
@@ -60,20 +76,20 @@ export class AuthController {
     });
 
     return { message: 'Tokens refreshed successfully' };
-
   }
 
   @UseGuards(AuthJwtGuard)
   @Get('profile')
-  async protectedRoute(@Req() req){
-    return {userId: req.user, message: 'You have accessed a protected route' };
+  async protectedRoute(@Req() req) {
+    console.log('Accessing protected route with user:', req.user);
+    return { user: req.user, message: 'You have accessed a protected route' };
   }
 
   @UseGuards(AuthJwtGuard)
   @Post('logout')
   async logout(@Res({ passthrough: true }) response: Response, @Req() req) {
     await this.authService.logout(req.user);
-    
+
     response.clearCookie('accessToken');
     response.clearCookie('refreshToken');
     return { message: 'Logout successful' };
@@ -81,7 +97,10 @@ export class AuthController {
 
   @UseGuards(AuthJwtGuard)
   @Post('change-password')
-  async changePassword(@Req() req, @Body() changePasswordDto: ChangePasswordDto) {
+  async changePassword(
+    @Req() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
     return await this.authService.changePassword(req.user, changePasswordDto);
   }
 
@@ -94,6 +113,4 @@ export class AuthController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return await this.authService.resetPassword(resetPasswordDto);
   }
-
-
 }
