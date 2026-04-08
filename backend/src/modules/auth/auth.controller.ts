@@ -88,7 +88,7 @@ export class AuthController {
   @UseGuards(AuthJwtGuard)
   @Post('logout')
   async logout(@Res({ passthrough: true }) response: Response, @Req() req) {
-    await this.authService.logout(req.user);
+    await this.authService.logout(req.user.userId); 
 
     response.clearCookie('accessToken');
     response.clearCookie('refreshToken');
@@ -101,7 +101,7 @@ export class AuthController {
     @Req() req,
     @Body() changePasswordDto: ChangePasswordDto,
   ) {
-    return await this.authService.changePassword(req.user, changePasswordDto);
+    return await this.authService.changePassword(req.user.userId, changePasswordDto);
   }
 
   @Post('forgot-password')
