@@ -61,8 +61,10 @@ export class AuthService {
             throw new BadRequestException('Invalid password');
         }
 
+        const payload = { sub: user._id, role: user.role, name: user.name, email: user.email };
+
         //generate and return access, refresh token 
-        return await this.generateJwtToken(user._id as string);
+        return await this.generateJwtToken(payload);
         
     }
 
@@ -76,11 +78,11 @@ export class AuthService {
         return this.generateJwtToken(storedToken.userId);
     }
 
-    async generateJwtToken(userId: string) {
+    async generateJwtToken(payload: any) {
         // Implementation for JWT token generation goes here
-        const accessToken = await this.jwtService.signAsync({ sub: userId });
+        const accessToken = await this.jwtService.signAsync(payload);
         const refreshToken = uuidv4(); // Generate a unique refresh token
-        await this.storeRefreshToken(userId, refreshToken);
+        await this.storeRefreshToken(payload.sub, refreshToken);
         return {accessToken, refreshToken}
     }
 

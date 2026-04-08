@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { EmailService } from './modules/email/email.service';
 import { CourseModule } from './modules/course/course.module';
+import { FileModule } from './modules/file/file.module';
 
 @Module({
   imports: [
@@ -16,13 +17,14 @@ import { CourseModule } from './modules/course/course.module';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGODB_URI'),
-      })
+      }),
     }),
     AuthModule,
     ChatModule,
     CourseModule,
+    FileModule,
   ],
   controllers: [AppController],
   providers: [AppService, EmailService],
 })
-export class AppModule { }
+export class AppModule {}
