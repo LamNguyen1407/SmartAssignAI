@@ -16,7 +16,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateQuestionDto } from 'src/model/dtos/chat/createQuestion.dto';
-import FormData from 'form-data';
+import FormData = require('form-data');
 import axios from 'axios';
 import { MessageType } from 'src/interface/type';
 import { CreateChatSessionDto } from 'src/model/dtos/chat/createChatSession.dto';
@@ -33,7 +33,6 @@ export class ChatController {
     @Body() body: { userID: any; courseId: any },
     @UploadedFile() file: Express.Multer.File,
   ) {
-    console.log(file)
     if (file) {
       const documentFile = await this.chatService.create_documentFile({
         courseId: body.courseId,
@@ -43,9 +42,11 @@ export class ChatController {
         size: file.size,
         userId: body.userID,
       });
-      console.log("run here");
       const form = new FormData();
-      form.append('file', file.buffer, file.originalname);
+      form.append('file', file.buffer, {
+        filename: file.originalname,
+        contentType: file.mimetype,
+      });
       const response = await axios.post(process.env.API_HANDLE_FILE, form, {
         headers: form.getHeaders(),
       });

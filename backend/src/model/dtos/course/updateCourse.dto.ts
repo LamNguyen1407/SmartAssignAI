@@ -7,5 +7,9 @@ export class UpdateCourseDto {
 
   @IsString()
   @IsOptional()
+  id?: string;
+
+  @IsString()
+  @IsOptional()
   description?: string;
 }

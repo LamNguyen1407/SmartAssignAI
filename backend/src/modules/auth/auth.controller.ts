@@ -19,10 +19,10 @@ import { ResetPasswordDto } from 'src/model/dtos/user/resetPassword.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('signup')
-  async signUp(@Body() userSignUpDto: UserSignUpDto) {
+  async signUp(@Body() userSignUpDto: any) {
     return this.authService.signUp(userSignUpDto);
   }
 
@@ -31,25 +31,23 @@ export class AuthController {
     @Body() userLoginDto: UserLoginDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const { accessToken, refreshToken } =
-      await this.authService.login(userLoginDto);
+    const { accessToken, refreshToken, userWithoutPassword } = await this.authService.login(userLoginDto);
 
     response.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // chỉ bật secure trên https
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 1000, // 1 giờ
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
-    // Gửi refreshToken nếu muốn (hoặc trả về body)
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+      maxAge: 180 * 24 * 60 * 60 * 1000,
     });
 
-    return { message: 'Login successful' };
+    return { message: 'Login successful', data: userWithoutPassword };
   }
 
   @Post('refresh')
@@ -65,14 +63,14 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 60 * 60 * 1000, // 1 giờ
+      maxAge: 60 * 60 * 1000,
     });
 
     response.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return { message: 'Tokens refreshed successfully' };
@@ -88,7 +86,7 @@ export class AuthController {
   @UseGuards(AuthJwtGuard)
   @Post('logout')
   async logout(@Res({ passthrough: true }) response: Response, @Req() req) {
-    await this.authService.logout(req.user.userId); 
+    await this.authService.logout(req.user.userId);
 
     response.clearCookie('accessToken');
     response.clearCookie('refreshToken');

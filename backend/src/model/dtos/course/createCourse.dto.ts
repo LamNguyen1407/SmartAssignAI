@@ -7,5 +7,5 @@ export class CreateCourseDto {
 
   @IsString()
   @IsNotEmpty()
-  description: string;
+  id: string;
 }
