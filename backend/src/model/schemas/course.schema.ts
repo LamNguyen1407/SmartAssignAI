@@ -7,6 +7,9 @@ export type CourseDocument = Course & Document;
 export class Course extends Document {
     @Prop({ required: true })
     name: string;
+
+    @Prop({ required: true })
+    id: string;
 }
 
 export const CourseSchema = SchemaFactory.createForClass(Course);

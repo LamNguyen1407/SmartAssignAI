@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, last } from 'rxjs';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Metadata, MetadataDocument } from 'src/model/schemas/metadata.schema';
@@ -16,21 +16,119 @@ import { MessageType } from 'src/interface/type';
 import { SchemaType } from '@google/generative-ai';
 import Groq from 'groq-sdk';
 import { FunctionCallingMode } from '@google/generative-ai';
+import { CacheAnswerDocument, CacheAnswer } from 'src/model/schemas/cacheAnswer.schema';
 
 @Injectable()
 export class ChatService {
   constructor(
     private readonly httpService: HttpService,
     @InjectModel(Metadata.name) private metadataModel: Model<MetadataDocument>,
-    @InjectModel(ChatSession.name)
-    private chatSessionModel: Model<ChatSessionDocument>,
-    @InjectModel(DocumentFile.name)
-    private documentFileModel: Model<DocumentFile>,
+    @InjectModel(ChatSession.name) private chatSessionModel: Model<ChatSessionDocument>,
+    @InjectModel(DocumentFile.name) private documentFileModel: Model<DocumentFile>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
+    @InjectModel(CacheAnswer.name) private cacheAnswerModel: Model<CacheAnswerDocument>,
   ) { }
 
   private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
   private groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+  async findVictim(courseId: string) {
+    const sorts = await this.cacheAnswerModel.find({ courseId }).sort({ hit: 1, lastHitAt: 1 }).exec();
+    const victim = sorts[0];
+    return victim;
+  }
+
+  async addCacheAnswer(courseId: string, question: string, answer: string, summary: string) {
+    const check = await this.cacheAnswerModel.find({ courseId }).exec();
+    if (check.length >= 30) {
+      const victim = await this.findVictim(courseId);
+      await this.cacheAnswerModel.findByIdAndDelete(victim._id).exec();
+    }
+    const embedding = await this.embeddings([question]);
+    await new this.cacheAnswerModel({
+      courseId,
+      question,
+      answer,
+      summary,
+      embedding: embedding[0],
+    }).save();
+  }
+
+  async updateCacheHit(id: string) {
+    const cache = await this.cacheAnswerModel.findById(id).exec();
+    if (cache) {
+      cache.hit += 1;
+      cache.lastHitAt = new Date();
+      await cache.save();
+    }
+  }
+
+  async checkCache(question: string, courseId: string) {
+    const check = await this.cacheAnswerModel.find({ courseId }).exec();
+    if (check.length === 0) return null;
+    const embedding = await this.embeddings([question]);
+    const result = await this.cacheAnswerModel.aggregate([
+      {
+        $vectorSearch: {
+          filter: { courseId: courseId },
+          index: 'vector_cache',
+          path: 'embedding',
+          queryVector: embedding[0],
+          numCandidates: 200,
+          limit: 1,
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          courseId: 1,
+          answer: 1,
+          summary: 1,
+          lastHitAt: 1,
+          score: { $meta: 'vectorSearchScore' },
+        },
+      },
+      {
+        $match: {
+          score: { $gte: 0.94 },
+        }
+      }
+    ]);
+    console.log('cache check result', result[0]?.score);
+    if (result.length > 0) {
+      const isStale = await this.documentFileModel.exists({
+        courseId: courseId,
+        updatedAt: { $gt: result[0].lastHitAt }
+      });
+      if (isStale) {
+        await this.cacheAnswerModel.findByIdAndDelete(result[0]._id);
+        return null;
+      }
+      return result[0];
+    }
+    return null;
+  }
+
+  async getShortTermMess(chatSessionID: string) {
+    let shortTermMessages = await this.getMessagesBySession(chatSessionID, 0, 10);
+    let shortTermMess = shortTermMessages.map((m) => {
+      if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+      else return 'bot: ' + m.summary;
+    }).join('\n');
+    return shortTermMess;
+  }
+
+  async summaryLongTermMess(chatSessionID: string) {
+    let longTermMessages = await this.getMessagesBySession(chatSessionID, 11, 20);
+    let longTermMess = longTermMessages.map((m) => {
+      if (m.type === MessageType.USER) return 'user: ' + m.contextContent;
+      else return 'bot: ' + m.summary;
+    }).join('\n');
+    if (longTermMess.length > 1000) {
+      longTermMess = await this.summaryContext(longTermMess);
+    }
+    return longTermMess;
+  }
 
   async deleteChatSession(chatSessionID: string) {
     const session = await this.chatSessionModel.findById(chatSessionID).exec();

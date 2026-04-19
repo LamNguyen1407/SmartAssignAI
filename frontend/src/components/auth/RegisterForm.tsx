@@ -30,18 +30,18 @@ export default function RegisterForm() {
   //   },
   // })
 
-  const {mutate: registerMutation, isPending: isRegisterPending} = useMutation({
+  const { mutate: registerMutation, isPending: isRegisterPending } = useMutation({
     mutationFn: async (data: RegisterSchema) => {
       const res = await RegisterUser(data);
       return res;
     },
-    onSuccess: () => { 
+    onSuccess: () => {
       toast.success("🎉 Register successfully"),
-      router.push("/login");
-     },
-    onError: (err: any) => { 
+        router.push("/login");
+    },
+    onError: (err: any) => {
       toast.error(err.response?.data?.message || "❌ Register failed")
-     },
+    },
   })
 
 
@@ -56,6 +56,7 @@ export default function RegisterForm() {
   })
 
   const onSubmit = (data: RegisterSchema) => {
+    console.log(data)
     // console.log("Submitting register form with data:", data);
     registerMutation(data);
   }
@@ -82,8 +83,8 @@ export default function RegisterForm() {
   }
 
   return (
-  
-      <Card className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl p-8 border border-gray-100">
+
+    <Card className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl p-8 border border-gray-100">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-center text-gray-900">
           Create Account
@@ -101,7 +102,7 @@ export default function RegisterForm() {
               <AvatarImage src={avatarPreview || avatarUrl || undefined} />
               <AvatarFallback>👤</AvatarFallback>
             </Avatar>
-            <input className="hidden" ref={fileInputRef}  type="file" accept="image/*" onChange={handleAvatarChange} />
+            <input className="hidden" ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} />
             {errors.avatarUrl && (
               <p className="text-sm text-red-500">{errors.avatarUrl.message}</p>
             )}
@@ -184,6 +185,6 @@ export default function RegisterForm() {
         </form>
       </CardContent>
     </Card>
-    
+
   )
 }
