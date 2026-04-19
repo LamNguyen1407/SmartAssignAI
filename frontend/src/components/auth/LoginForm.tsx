@@ -13,25 +13,28 @@ import { toast } from "react-toastify";
 import Link from "next/link";
 
 export default function LoginForm() {
-    const router = useRouter();
+  const router = useRouter();
 
-    const {mutate: loginMutation, isPending: isLoginPending} = useMutation({
+  const { mutate: loginMutation, isPending: isLoginPending } = useMutation({
     mutationFn: async (data: LoginSchema) => {
-        return await LoginUser(data);
-        },
-        onSuccess: () => {
-          toast.success("🎉 Login successfully!"),
-          router.push("/");
-        },
-        onError: (err: any) => { toast.error(err.response?.data?.message || "❌ Login failed") },
-    })
+      return await LoginUser(data);
+    },
+    onSuccess: (data) => {
+      const role = data.data.data.role;
+      toast.success("🎉 Login successfully!");
+      if (role === 'admin') {
+        router.push('/dashboard');
+      } else router.push('/chat')
+    },
+    onError: (err: any) => { toast.error(err.response?.data?.message || "❌ Login failed") },
+  })
 
 
-    const { register, handleSubmit, formState: { errors } } = useForm<LoginSchema>({
-        resolver: zodResolver(loginSchema),
-    });
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginSchema>({
+    resolver: zodResolver(loginSchema),
+  });
 
-    
+
 
   const onSubmit = async (data: LoginSchema) => {
     // console.log("Submitting login form with data:", data);
