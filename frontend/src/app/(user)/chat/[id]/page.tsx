@@ -489,8 +489,8 @@
 import React, { useState, useRef, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { SendOutlined, RobotOutlined, UserOutlined, HistoryOutlined, CheckCircleFilled, BookOutlined } from "@ant-design/icons"
-import { Button, Input, Avatar, Spin, Tooltip, Tag } from "antd"
+import { SendOutlined, RobotOutlined, UserOutlined } from "@ant-design/icons"
+import { Button, Input, Avatar, Spin, Tag } from "antd"
 import Markdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import rehypeHighlight from "rehype-highlight"
@@ -586,69 +586,56 @@ export default function ChatDetailPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-[#f9fafb] p-3 sm:p-5">
-      <aside className="hidden w-72 lg:flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden mr-5">
-        <div className="p-5 border-b flex items-center gap-2 font-bold text-gray-700">
-          <HistoryOutlined /> Lịch sử hội thoại
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
-          <ChatSidebar />
-        </div>
+    <div className="flex h-[calc(100vh-64px)] bg-[#F0F2F5] p-3 lg:p-5 gap-4">
+      <aside className="hidden lg:flex w-72 flex-col bg-[#1E293B] rounded-[2rem] shadow-2xl overflow-hidden border border-slate-700/50 transition-all">
+        <ChatSidebar />
       </aside>
 
-      <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-md border border-gray-50 overflow-hidden relative">
-        {/* HEADER */}
-        <header className="px-6 h-20 flex items-center justify-between border-b border-gray-50 bg-white/80 backdrop-blur-sm z-10">
+      <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
+        <header className="px-6 h-16 flex items-center justify-between border-b border-gray-50 bg-white/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            <Avatar size={45} className="bg-blue-600 shadow-lg shadow-blue-200" icon={<RobotOutlined />} />
-            <div>
-              <h2 className="text-sm font-bold text-gray-800">
-                {"AI Assistant"}
-              </h2>
-              <div className="flex items-center gap-1.5 text-[10px] text-green-500 font-bold uppercase tracking-widest">
-                <CheckCircleFilled /> AI Đang Trực Tuyến
-              </div>
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <RobotOutlined className="text-blue-600" />
             </div>
+            <h2 className="text-sm font-bold text-gray-700 tracking-wide uppercase">AI Academic</h2>
           </div>
-          <Tag color="blue" className="rounded-full px-3 border-none font-medium">
-            {chatSessionData?.courseId?.name ?? "Chế độ học tập"}
+
+          <Tag color="blue" className="rounded-xl px-4 py-1 border-none font-semibold bg-slate-100 text-slate-600">
+            {chatSessionData?.courseId?.name ?? "Đang tải..."}
           </Tag>
         </header>
 
-        {/* NỘI DUNG CHAT */}
-        <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-10 space-y-8 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#FAFAFB] scrollbar-hide">
           {isChatMessagesLoading ? (
             <div className="flex h-full items-center justify-center">
-              <Spin size="large" tip="Đang tải hội thoại..." />
+              <Spin size="large" />
             </div>
           ) : (
             messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn("flex gap-4", msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row")}
-              >
+              <div key={msg.id} className={cn("flex gap-3", msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row")}>
                 <Avatar
-                  size={38}
-                  className={msg.type === MessageType.USER ? "bg-gray-800 shadow-md" : "bg-blue-100 text-blue-600"}
+                  size={32}
+                  className={cn("mt-1 shrink-0 shadow-sm", msg.type === MessageType.USER ? "bg-slate-800" : "bg-blue-600")}
                   icon={msg.type === MessageType.USER ? <UserOutlined /> : <RobotOutlined />}
                 />
-                <div className={cn("flex max-w-[80%] flex-col gap-1.5", msg.type === MessageType.USER ? "items-end" : "items-start")}>
-                  <div
-                    className={cn(
-                      "px-5 py-3 rounded-[1.8rem] text-sm leading-relaxed shadow-sm",
-                      msg.type === MessageType.USER
-                        ? "bg-blue-600 text-white rounded-tr-none"
-                        : "bg-gray-100 text-gray-800 rounded-tl-none"
-                    )}
-                  >
-                    <div className="prose prose-sm max-w-none prose-p:my-1">
-                      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                <div className={cn("flex flex-col gap-1.5", msg.type === MessageType.USER ? "items-end" : "items-start")}>
+                  <div className={cn(
+                    "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm max-w-[85%]",
+                    msg.type === MessageType.USER
+                      ? "bg-[#007AFF] text-white rounded-[1.3rem] rounded-tr-none"
+                      : "bg-[#FFFFFF] border border-gray-200 text-gray-800 rounded-[1.3rem] rounded-tl-none"
+                  )}>
+                    <div className="prose prose-sm max-w-none prose-p:my-0 prose-pre:bg-slate-900 prose-pre:p-0">
+                      <Markdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight]}
+                      >
                         {msg.content}
                       </Markdown>
                     </div>
                   </div>
-                  <span className="text-[10px] text-gray-400 px-2 font-medium">
-                    {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  <span className="text-[9px] text-gray-400 font-bold px-2">
+                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>
@@ -656,55 +643,64 @@ export default function ChatDetailPage() {
           )}
 
           {isChatting && (
-            <div className="flex gap-4">
-              <Avatar size={38} className="bg-blue-50 text-blue-400" icon={<RobotOutlined />} />
-              <div className="bg-gray-50 border border-gray-100 px-6 py-4 rounded-[1.5rem] rounded-tl-none flex items-center gap-2">
-                <Spin size="small" />
-                <span className="text-xs text-gray-400 italic">AI đang trả lời...</span>
+            <div className="flex gap-3 items-center ml-2">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* INPUT AREA - PHONG CÁCH PILL SHAPE */}
-        <div className="p-6 bg-white">
-          <div className="max-w-4xl mx-auto flex items-end gap-2 bg-[#f4f4f4] p-2 rounded-[2.5rem] transition-all focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 border border-transparent focus-within:border-blue-400 shadow-inner">
-            <TextArea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSendMessage()
-                }
-              }}
-              placeholder="Hỏi trợ lý về tài liệu này..."
-              autoSize={{ minRows: 1, maxRows: 6 }}
-              variant="borderless"
-              className="flex-1 text-sm py-3 px-5 resize-none bg-transparent focus:bg-transparent"
-              disabled={isChatting}
-            />
+        <div className="p-4 bg-white border-t border-gray-50">
+          <div className="max-w-3xl mx-auto flex items-center gap-2">
+            <div className={cn(
+              "flex-1 flex items-end bg-[#F0F2F5] rounded-[2rem] px-5 py-2.5 transition-all border border-transparent",
+              "focus-within:bg-[#E8EAED] focus-within:border-gray-200 shadow-inner"
+            )}>
+              <TextArea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                placeholder="Đặt câu hỏi cho AI..."
+                autoSize={{ minRows: 1, maxRows: 10 }}
+                variant="borderless"
+                className="flex-1 text-[15px] py-1 bg-transparent focus:bg-transparent placeholder:text-gray-400"
+                disabled={isChatting}
+              />
 
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={handleSendMessage}
-              loading={isChatting}
-              disabled={!inputValue.trim()}
-              className="h-11 w-11 flex-shrink-0 bg-blue-600 rounded-full shadow-lg flex items-center justify-center border-none hover:bg-blue-700 active:scale-95 transition-all mb-[2px] mr-[2px]"
-            />
+              <div className={cn(
+                "overflow-hidden transition-all duration-300 ease-out flex items-center",
+                inputValue.trim() ? "w-10 opacity-100 ml-2" : "w-0 opacity-0"
+              )}>
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<SendOutlined className="!text-white" />}
+                  onClick={handleSendMessage}
+                  loading={isChatting}
+                  className="!bg-black hover:!bg-gray-600 border-none shadow-md shrink-0 scale-110 transition-all flex items-center justify-center"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex justify-center gap-6 mt-3">
-            <span className="text-[10px] text-gray-400 flex items-center gap-1">
-              <BookOutlined className="text-[12px]" /> Nhấn <b>Enter</b> để gửi
-            </span>
-            <span className="text-[10px] text-gray-400 flex items-center gap-1 font-semibold text-blue-500">
-              <CheckCircleFilled className="text-[12px]" /> Kiến thức chuẩn xác từ Server
-            </span>
-          </div>
+          <p className="text-center mt-3 text-[12px] text-gray-400 font-medium">
+            AI có thể mắc sai sót, vui lòng xác thục lại với giảng viên phụ trách!
+          </p>
         </div>
       </main>
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .prose pre { background-color: #f8fafc !important; padding: 12px; border-radius: 8px; }
+      `}</style>
     </div>
   )
 }

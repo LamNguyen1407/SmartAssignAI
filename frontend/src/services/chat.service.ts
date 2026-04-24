@@ -5,6 +5,7 @@ export const ChatWithAI = async (
   courseId: string,
   chatSessionID?: string,
 ) => {
+  console.log("chatSessionID", chatSessionID);
   return await axiosClient.post("http://localhost:3001/chat/question", {
     question: question,
     courseId: courseId,

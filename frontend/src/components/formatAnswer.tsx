@@ -27,7 +27,6 @@ export function formatAnswer(text: string) {
       continue
     }
 
-    // ===== UNORDERED LIST =====
     if (/^[-*]\s+/.test(line)) {
       const items = []
 
@@ -48,7 +47,6 @@ export function formatAnswer(text: string) {
       continue
     }
 
-    // ===== ORDERED LIST =====
     if (/^\d+\.\s+/.test(line)) {
       const items = []
 
@@ -69,7 +67,6 @@ export function formatAnswer(text: string) {
       continue
     }
 
-    // ===== PARAGRAPH =====
     elements.push(
       <p key={i} className="leading-relaxed">
         {parseInline(line)}

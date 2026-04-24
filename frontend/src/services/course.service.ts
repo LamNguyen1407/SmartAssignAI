@@ -23,3 +23,8 @@ export const deleteFile = async (data: { id: string }) => {
   const res = await axiosClient.delete('/course/file', { params: { id: data.id } });
   return res.data;
 }
+
+export const createCourse = async (data: { id: string, name: string }) => {
+  const res = await axiosClient.post('/course', data);
+  return res.data;
+}

@@ -1,30 +1,27 @@
 "use client";
 
 import { useState } from 'react';
-import { Table, Space, Button, Input, Popconfirm, Modal, Tooltip, Typography, Card } from 'antd';
-import { FileAddOutlined, DeleteOutlined, EyeOutlined, ReadOutlined, EditOutlined } from '@ant-design/icons';
+import { Table, Space, Button, Input, Popconfirm, Modal, Tooltip, Typography, Card, Form } from 'antd';
+import { FileAddOutlined, DeleteOutlined, EyeOutlined, ReadOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
-import { getCourseWithFiles } from '@/services/course.service';
+import { getCourseWithFiles, createCourse } from '@/services/course.service';
 import { toast } from 'react-toastify';
 import AddDocumentModal from '@/components/dashboard/course/FormAddFile';
 import { deleteFile } from '@/services/course.service';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 const { Text } = Typography;
-const { Search } = Input;
 
-const ForumManager = () => {
+const CourseManager = () => {
     const queryClient = useQueryClient();
-    const [isEditOpen, setIsEditOpen] = useState(false);
-    const [editingPost, setEditingPost] = useState(null);
-    const [isEditAnsOpen, setIsEditAnsOpen] = useState(false);
-    const [isShowAnsOpen, setIsShowAnsOpen] = useState(false);
-    const [editingAns, setEditingAns] = useState(null);
     const [isOpenAddFile, setOpenAddFile] = useState(false);
     const [record, setRecord] = useState(null);
+    const [isAddOpen, setAddOpen] = useState(false);
+    const [form] = Form.useForm();
+    const { role } = useAuthStore();
 
-    const [searchText, setSearchText] = useState('');
     const { data: questionsData, isLoading: isGettingQuestion } = useQuery({
         queryKey: ['dashboard-get-course-file'],
         queryFn: () => getCourseWithFiles(),
@@ -41,57 +38,36 @@ const ForumManager = () => {
         }
     });
 
-    // const { mutate: delAnswer, isPending: delingAnswer } = useMutation({
-    //     mutationFn: (data: { questionId: number, answerId: number }) => ForumDeleteAnswer(data),
-    //     onSuccess: (data) => {
-    //         queryClient.invalidateQueries({ queryKey: ['dashboard-get-question'] });
-    //         toast.success(data.message);
-    //     },
-    //     onError: (error) => {
-    //         toast.error(error.message);
-    //     }
-    // });
+    const { mutate: createCourseMutation, isPending: creating } = useMutation({
+        mutationFn: (data: { id: string, name: string }) => createCourse(data),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['dashboard-get-course-file'] });
+            toast.success(data.message);
+            form.resetFields();
+            setAddOpen(false);
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        }
+    });
 
     const handleShowOpen = (record: any) => {
         setRecord(record);
         setOpenAddFile(true);
     }
 
-    const handleEditOpen = (record: any) => {
-        setIsEditOpen(true);
-        setEditingPost(record);
+    const handleSubmit = () => {
+        const value = form.getFieldsValue();
+        const obj = {
+            id: value.subjectCode,
+            name: value.subjectName
+        }
+        createCourseMutation(obj);
     }
 
-    const handleShowAnsOpen = (comment: any) => {
-        setIsShowAnsOpen(true);
-        setEditingAns(comment);
-    }
-
-    const handleEditAnsOpen = (comment: any) => {
-        setIsEditAnsOpen(true);
-        setEditingAns(comment);
-    }
-
-    const handleDeleteQuestion = (record: any) => {
-        // Swal.fire({
-        //     title: 'Bạn có chắc muốn xóa?',
-        //     text: 'Bạn có chắc muốn xóa câu hỏi này? Hành động này không thể hoàn tác',
-        //     icon: 'warning',
-        //     showCancelButton: true,
-        //     cancelButtonColor: 'red',
-        //     cancelButtonText: 'Hủy',
-        //     confirmButtonColor: 'green',
-        //     confirmButtonText: 'Xác nhận',
-        // }).then((result) => {
-        //     const confirm = result.isConfirmed;
-        //     if (confirm) {
-        //         delQuestion({ questionId: record.Qid });
-        //     }
-        // })
-    }
-
-    const handleSearch = (value: any) => {
-        setSearchText(value);
+    const handleClose = () => {
+        form.resetFields();
+        setAddOpen(false);
     }
 
     const handleDeleteFile = (file: any) => {
@@ -220,15 +196,17 @@ const ForumManager = () => {
                         <Text type="secondary">Quản lý các tài liệu của môn học</Text>
                     </div>
 
-                    {/* <div className="flex gap-2">
-                        <Search
-                            placeholder="Tiêu đề, tác giả, nội dung..."
-                            allowClear
-                            enterButton
-                            className="w-full md:w-64"
-                            onSearch={handleSearch}
-                        />
-                    </div> */}
+                    {(role === 'admin') && (<div className="flex gap-2">
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            size="large"
+                            className="w-full md:w-auto"
+                            onClick={() => { setAddOpen(true) }}
+                        >
+                            Thêm môn học
+                        </Button>
+                    </div>)}
                 </div>
 
                 <Card className="shadow-sm overflow-hidden">
@@ -244,8 +222,49 @@ const ForumManager = () => {
                 </Card>
             </div>
             <AddDocumentModal open={isOpenAddFile} onCancel={() => setOpenAddFile(false)} data={record} />
+            <Modal
+                open={isAddOpen}
+                title="Thêm mới môn học"
+                okText="Tạo mới"
+                cancelText="Hủy bỏ"
+                onCancel={handleClose}
+                onOk={handleSubmit}
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    name="form_in_modal"
+                    initialValues={{ modifier: 'public' }}
+                >
+                    <Form.Item
+                        name="subjectName"
+                        label="Tên môn học"
+                        rules={[
+                            {
+                                required: true,
+                                message: 'Vui lòng nhập tên môn học!',
+                            },
+                        ]}
+                    >
+                        <Input placeholder="Ví dụ: Cấu trúc dữ liệu và Giải thuật" />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="subjectCode"
+                        label="Mã môn học"
+                        rules={[
+                            {
+                                required: true,
+                                message: 'Vui lòng nhập mã môn học!',
+                            },
+                        ]}
+                    >
+                        <Input placeholder="Ví dụ: CO2003" />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </>
     );
 };
 
-export default ForumManager;
+export default CourseManager;

@@ -13,12 +13,17 @@ import { CourseService } from './course.service';
 import { CreateCourseDto } from 'src/model/dtos/course/createCourse.dto';
 import { UpdateCourseDto } from 'src/model/dtos/course/updateCourse.dto';
 import { AuthJwtGuard } from '../guards/jwt.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from 'src/model/schemas/user.schema';
 
 @Controller('course')
 export class CourseController {
   constructor(private readonly courseService: CourseService) { }
 
+  @UseGuards(AuthJwtGuard, RolesGuard)
   @Post()
+  @Roles(Role.ADMIN)
   async create(@Body() createCourseDto: CreateCourseDto) {
     return await this.courseService.create(createCourseDto);
   }
@@ -28,14 +33,17 @@ export class CourseController {
     return await this.courseService.findAll();
   }
 
-  @UseGuards(AuthJwtGuard)
+  @UseGuards(AuthJwtGuard, RolesGuard)
   @Get('/getCourseWithFiles')
+  @Roles(Role.ADMIN, Role.LECTURE)
   async getCourseWithFiles() {
     const data = await this.courseService.getCourseWithFiles();
     return data;
   }
 
+  @UseGuards(AuthJwtGuard, RolesGuard)
   @Delete('/file')
+  @Roles(Role.ADMIN, Role.LECTURE)
   async deleteFile(@Query('id') id: string) {
     console.log("here");
     console.log(id);

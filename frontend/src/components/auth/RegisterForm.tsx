@@ -36,11 +36,11 @@ export default function RegisterForm() {
       return res;
     },
     onSuccess: () => {
-      toast.success("🎉 Register successfully"),
+      toast.success("Register successfully"),
         router.push("/login");
     },
     onError: (err: any) => {
-      toast.error(err.response?.data?.message || "❌ Register failed")
+      toast.error(err.response?.data?.message || "Register failed")
     },
   })
 
@@ -69,7 +69,6 @@ export default function RegisterForm() {
     if (file) {
       const url = URL.createObjectURL(file)
       setAvatarPreview(url)
-      // Nếu bạn upload ảnh lên server, có thể thay đổi logic ở đây
       setValue("avatarUrl", url)
     }
   }
@@ -96,7 +95,6 @@ export default function RegisterForm() {
 
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Avatar */}
           <div className="flex flex-col items-center gap-3">
             <Avatar onClick={handleAvatarClick} className="w-20 h-20 border cursor-pointer">
               <AvatarImage src={avatarPreview || avatarUrl || undefined} />
@@ -108,35 +106,30 @@ export default function RegisterForm() {
             )}
           </div>
 
-          {/* Name */}
           <div className="space-y-1">
             <Label htmlFor="name">Full Name</Label>
             <Input {...register("name")} placeholder="Enter your full name" />
             {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
           </div>
 
-          {/* Username */}
           <div className="space-y-1">
             <Label htmlFor="username">Username</Label>
             <Input {...register("username")} placeholder="Enter your username" />
             {errors.username && <p className="text-sm text-red-500">{errors.username.message}</p>}
           </div>
 
-          {/* Email */}
           <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
             <Input {...register("email")} type="email" placeholder="Enter your email" />
             {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
           </div>
 
-          {/* Password */}
           <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
             <Input {...register("password")} type="password" placeholder="Create a password" />
             {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
           </div>
 
-          {/* Gender */}
           <div className="space-y-1">
             <Label htmlFor="gender">Gender</Label>
             <Select
@@ -155,14 +148,12 @@ export default function RegisterForm() {
             {errors.gender && <p className="text-sm text-red-500">{errors.gender.message}</p>}
           </div>
 
-          {/* Phone number */}
           <div className="space-y-1">
             <Label htmlFor="phoneNumber">Phone Number</Label>
             <Input {...register("phoneNumber")} placeholder="+84123456789" />
             {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber.message}</p>}
           </div>
 
-          {/* Date of Birth */}
           <div className="space-y-1">
             <Label htmlFor="dateOfBirth">Date of Birth</Label>
             <Input
@@ -174,7 +165,6 @@ export default function RegisterForm() {
             {errors.dateOfBirth && <p className="text-sm text-red-500">{errors.dateOfBirth.message}</p>}
           </div>
 
-          {/* Submit */}
           <Button
             type="submit"
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"

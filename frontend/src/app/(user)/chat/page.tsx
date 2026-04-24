@@ -455,6 +455,7 @@
 //   )
 // }
 
+
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
@@ -464,10 +465,11 @@ import {
   UserOutlined,
   CheckCircleFilled,
   HistoryOutlined,
-  BookOutlined,
-  WarningOutlined
+  PlusOutlined,
+  MessageOutlined,
+  MoreOutlined
 } from "@ant-design/icons";
-import { Select, Button, Input, Avatar, Spin, Tag, Tooltip } from "antd";
+import { Select, Button, Input, Avatar, Spin, Tooltip } from "antd";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -477,6 +479,7 @@ import { ChatWithAI } from "@/services/chat.service";
 import ChatSidebar from "@/components/chat/ChatSidebar";
 import { Message, MessageType } from "@/interface/chat.interface";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 const { TextArea } = Input;
 
@@ -485,13 +488,14 @@ export default function ChatPage() {
     {
       id: "1",
       type: MessageType.ASSISTANT,
-      content: "Xin chào! Tôi là trợ lý học tập AI. Vui lòng chọn một khóa học phía trên để tôi có thể hỗ trợ bạn chính xác nhất.",
+      content: "Chào bạn! Tôi có thể giúp gì cho bạn trong việc tìm hiểu khóa học hôm nay?",
       timestamp: new Date(),
     },
   ]);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const { data: courseData, isLoading: isLoadingCourses } = useQuery({
     queryKey: ["courses"],
@@ -502,12 +506,7 @@ export default function ChatPage() {
     mutationFn: (vars: { question: string; courseId: string }) =>
       ChatWithAI(vars.question, vars.courseId),
     onSuccess: (data) => {
-      setMessages((prev) => [...prev, {
-        id: Date.now().toString(),
-        type: MessageType.ASSISTANT,
-        content: data.data.answer,
-        timestamp: new Date(),
-      }]);
+      router.push(`/chat/${data.data.chatSessionID}`);
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || "Lỗi kết nối với AI");
@@ -520,7 +519,7 @@ export default function ChatPage() {
 
   const handleSendMessage = () => {
     if (!selectedCourseId) {
-      toast.warn("Vui lòng chọn một khóa học trước khi đặt câu hỏi!");
+      toast.warn("Vui lòng chọn khóa học!");
       return;
     }
     if (!inputValue.trim() || isChatting) return;
@@ -535,97 +534,77 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-[#f9fafb] p-3 sm:p-5">
-      <aside className="hidden w-72 lg:flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden mr-5">
-        <div className="p-5 border-b flex items-center gap-2 font-bold text-gray-700">
-          <HistoryOutlined /> Lịch sử hội thoại
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 scrollbar-hide">
-          <ChatSidebar />
-        </div>
+    <div className="flex h-[calc(100vh-80px)] bg-[#F0F2F5] p-3 lg:p-5 gap-4">
+      <aside className="hidden lg:flex w-72 flex-col bg-[#1E293B] rounded-[2rem] shadow-2xl overflow-hidden border border-slate-700/50 transition-all">
+        <ChatSidebar />
       </aside>
-      <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-md border border-gray-50 overflow-hidden relative">
-        <header className="px-6 h-20 flex items-center justify-between border-b border-gray-50 bg-white/80 backdrop-blur-sm z-10">
+
+      <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
+        <header className="px-6 h-16 flex items-center justify-between border-b border-gray-50 bg-white/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <Avatar size={45} className="bg-blue-600 shadow-lg shadow-blue-200" icon={<RobotOutlined />} />
-              <div className={cn("absolute bottom-0 right-0 w-3 h-3 border-2 border-white rounded-full", selectedCourseId ? "bg-green-500" : "bg-gray-400")}></div>
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <RobotOutlined className="text-blue-600" />
             </div>
-            <div>
-              <h2 className="text-base font-bold text-gray-800">Trợ lý học tập AI</h2>
-              {selectedCourseId ? (
-                <div className="flex items-center gap-1.5 text-[11px] text-blue-500 font-semibold uppercase tracking-wider">
-                  <CheckCircleFilled /> Tài liệu đã sẵn sàng
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-[11px] text-amber-500 font-semibold uppercase tracking-wider">
-                  <WarningOutlined /> Vui lòng chọn môn học
-                </div>
-              )}
-            </div>
+            <h2 className="text-sm font-bold text-gray-700 tracking-tight tracking-wide uppercase">AI Academic</h2>
           </div>
           <Select
-            placeholder="Chọn khóa học để bắt đầu"
-            className="w-64"
-            size="large"
+            placeholder="Chọn khóa học để hỏi"
+            className="w-64 select-modern"
             bordered={false}
+            style={{ background: '#f1f5f9', borderRadius: '12px' }}
             loading={isLoadingCourses}
-            style={{ backgroundColor: '#f3f4f6', borderRadius: '1rem' }}
             onChange={setSelectedCourseId}
             options={courseData?.map((c: any) => ({ value: c._id, label: c.name }))}
           />
         </header>
-        <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 scrollbar-hide">
+
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#FAFAFB] scrollbar-hide">
           {messages.map((msg) => (
-            <div key={msg.id} className={cn("flex gap-4", msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row")}>
+            <div key={msg.id} className={cn("flex gap-3", msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row")}>
               <Avatar
-                size={38}
-                className={msg.type === MessageType.USER ? "bg-gray-800 shadow-md" : "bg-blue-100 text-blue-600"}
+                size={32}
+                className={cn("mt-1 shrink-0 shadow-sm", msg.type === MessageType.USER ? "bg-slate-800" : "bg-blue-600")}
                 icon={msg.type === MessageType.USER ? <UserOutlined /> : <RobotOutlined />}
               />
-              <div className={cn("flex max-w-[75%] flex-col gap-1.5", msg.type === MessageType.USER ? "items-end" : "items-start")}>
+              <div className={cn("flex flex-col gap-1.5", msg.type === MessageType.USER ? "items-end" : "items-start")}>
                 <div className={cn(
-                  "px-5 py-3.5 text-sm shadow-sm leading-relaxed",
+                  "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm max-w-[85%]",
                   msg.type === MessageType.USER
-                    ? "bg-blue-600 text-white rounded-[1.5rem] rounded-tr-none"
-                    : "bg-gray-100 text-gray-800 rounded-[1.5rem] rounded-tl-none"
+                    ? "bg-[#007AFF] text-white rounded-[1.3rem] rounded-tr-none"
+                    : "bg-[#FFFFFF] border border-gray-200 text-gray-800 rounded-[1.3rem] rounded-tl-none"
                 )}>
-                  <div className="prose prose-sm max-w-none break-words">
-                    <Markdown remarkPlugins={[remarkGfm]}>
+                  <div className="prose prose-sm max-w-none prose-p:my-0 prose-pre:bg-slate-900 prose-pre:p-0">
+                    <Markdown
+                      remarkPlugins={[remarkGfm]}
+                    >
                       {msg.content}
                     </Markdown>
                   </div>
                 </div>
-                <span className="text-[10px] text-gray-400 px-2 uppercase font-medium">
+                <span className="text-[9px] text-gray-400 font-bold px-2">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
           ))}
+
           {isChatting && (
-            <div className="flex gap-4 animate-pulse">
-              <Avatar size={38} className="bg-blue-50 text-blue-400" icon={<RobotOutlined />} />
-              <div className="bg-gray-50 border border-gray-100 px-6 py-4 rounded-[1.5rem] rounded-tl-none">
-                <div className="flex gap-1 items-center">
-                  <Spin size="small" className="mr-2" />
-                  <span className="text-xs text-gray-400 italic">AI đang trả lời...</span>
-                </div>
+            <div className="flex gap-3 items-center ml-2">
+              <div className="flex gap-1">
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
-        <div className="bg-white p-4 border-t lg:p-6">
-          <Tooltip
-            title={!selectedCourseId ? "Bạn phải chọn khóa học trước khi đặt câu hỏi" : ""}
-            color="orange"
-            placement="top"
-          >
+
+        <div className="p-4 bg-white border-t border-gray-50">
+          <div className="max-w-3xl mx-auto flex items-center gap-2">
             <div className={cn(
-              "max-w-4xl mx-auto flex items-end gap-2 p-2 rounded-[2.5rem] transition-all border",
-              !selectedCourseId
-                ? "bg-gray-100 border-gray-200 cursor-not-allowed opacity-70"
-                : "bg-[#f4f4f4] border-transparent focus-within:bg-white focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400"
+              "flex-1 flex items-end bg-[#F0F2F5] rounded-[2rem] px-5 py-2.5 transition-all border border-transparent",
+              selectedCourseId && "focus-within:bg-[#E8EAED] focus-within:border-gray-200 shadow-inner"
             )}>
               <TextArea
                 value={inputValue}
@@ -636,27 +615,40 @@ export default function ChatPage() {
                     handleSendMessage();
                   }
                 }}
-                placeholder={selectedCourseId ? "Hỏi trợ lý về khóa học..." : "Hãy chọn khóa học phía trên..."}
-                autoSize={{ minRows: 1, maxRows: 6 }}
+                placeholder={selectedCourseId ? "Đặt câu hỏi cho AI..." : "Chọn khóa học phía trên..."}
+                autoSize={{ minRows: 1, maxRows: 10 }}
                 variant="borderless"
-                className="flex-1 text-sm py-2 px-4 resize-none bg-transparent focus:bg-transparent placeholder:text-gray-400"
+                className="flex-1 text-[15px] py-1 bg-transparent focus:bg-transparent placeholder:text-gray-400"
                 disabled={isChatting || !selectedCourseId}
               />
-              <Button
-                type="primary"
-                icon={<SendOutlined style={{ fontSize: '16px' }} />}
-                onClick={handleSendMessage}
-                loading={isChatting}
-                disabled={!selectedCourseId || !inputValue.trim()}
-                className="h-10 w-10 flex-shrink-0 bg-blue-600 rounded-full shadow-md flex items-center justify-center border-none hover:bg-blue-700 active:scale-95 transition-all mb-[2px] mr-[2px] disabled:bg-gray-300"
-              />
+
+              <div className={cn(
+                "overflow-hidden transition-all duration-300 ease-out flex items-center",
+                inputValue.trim() ? "w-10 opacity-100 ml-2" : "w-0 opacity-0"
+              )}>
+                <Button
+                  type="text"
+                  shape="circle"
+                  icon={<SendOutlined className="!text-white" />}
+                  onClick={handleSendMessage}
+                  loading={isChatting}
+                  className="!bg-black hover:!bg-gray-600 border-none shadow-md shrink-0 scale-110 transition-all"
+                />
+              </div>
             </div>
-          </Tooltip>
-          <p className="mt-2 text-center text-[11px] text-gray-400">
-            Nhấn <span className="font-semibold">Enter</span> để gửi, <span className="font-semibold">Shift + Enter</span> để xuống dòng
+          </div>
+          <p className="text-center mt-3 text-[12px] text-gray-400 font-medium">
+            AI có thể mắc sai sót, vui lòng xác thục lại với giảng viên phụ trách!
           </p>
         </div>
       </main>
+
+      <style jsx global>{`
+        .custom-sidebar-scroll::-webkit-scrollbar { width: 3px; }
+        .custom-sidebar-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .select-modern .ant-select-selector { font-weight: 600 !important; color: #475569 !important; }
+      `}</style>
     </div>
   );
 }
