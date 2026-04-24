@@ -64,12 +64,12 @@ export default function SilderLayout({ children }: { children: React.ReactNode }
                 className="!sticky !top-0 !left-0 !h-screen !bg-[#1E293B] shadow-xl z-[1001]"
             >
                 <div className="flex h-16 items-center px-6 my-4">
-                    <div className="flex h-9 w-9 min-w-[36px] items-center justify-center rounded-xl bg-blue-600 font-bold text-white shadow-lg shadow-blue-500/30">
+                    <div className="flex h-9 w-9 min-w-[36px] items-center justify-center rounded-xl bg-slate-900 font-bold text-white shadow-lg">
                         AI
                     </div>
                     {!collapsed && (
                         <span className="ml-3 text-lg font-bold tracking-tight text-white truncate transition-opacity duration-300">
-                            SmartAssignAI
+                            SmartAssign<span className="text-blue-600">AI</span>
                         </span>
                     )}
                 </div>

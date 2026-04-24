@@ -586,18 +586,20 @@ export default function ChatDetailPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-[#F0F2F5] p-3 lg:p-5 gap-4">
+    <div className="flex h-[calc(100vh-80px)] bg-[#F0F2F5] p-3 lg:p-5 gap-6">
+      {/* SIDEBAR */}
       <aside className="hidden lg:flex w-72 flex-col bg-[#1E293B] rounded-[2rem] shadow-2xl overflow-hidden border border-slate-700/50 transition-all">
         <ChatSidebar />
       </aside>
 
+      {/* MAIN CHAT */}
       <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-50 bg-white/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center animate-pulse">
               <RobotOutlined className="text-blue-600" />
             </div>
-            <h2 className="text-sm font-bold text-gray-700 tracking-wide uppercase">AI Academic</h2>
+            <h2 className="text-sm font-bold text-gray-700 tracking-wide uppercase">Trợ lý hỗ trợ bài tập</h2>
           </div>
 
           <Tag color="blue" className="rounded-xl px-4 py-1 border-none font-semibold bg-slate-100 text-slate-600">
@@ -605,36 +607,50 @@ export default function ChatDetailPage() {
           </Tag>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#FAFAFB] scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#FAFAFB] scrollbar-hide custom-scroll bg-gray-200">
           {isChatMessagesLoading ? (
             <div className="flex h-full items-center justify-center">
               <Spin size="large" />
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} className={cn("flex gap-3", msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row")}>
+              <div
+                key={msg.id}
+                className={cn(
+                  "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                  msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row"
+                )}
+              >
                 <Avatar
                   size={32}
-                  className={cn("mt-1 shrink-0 shadow-sm", msg.type === MessageType.USER ? "bg-slate-800" : "bg-blue-600")}
+                  className={cn(
+                    "mt-1 shrink-0 shadow-md transition-transform hover:scale-110",
+                    msg.type === MessageType.USER ? "bg-slate-800" : "bg-blue-600"
+                  )}
                   icon={msg.type === MessageType.USER ? <UserOutlined /> : <RobotOutlined />}
                 />
-                <div className={cn("flex flex-col gap-1.5", msg.type === MessageType.USER ? "items-end" : "items-start")}>
+
+                <div className={cn(
+                  "flex flex-col gap-1.5 w-full", // Thêm w-full để container bọc ngoài ổn định
+                  msg.type === MessageType.USER ? "items-end" : "items-start"
+                )}>
                   <div className={cn(
-                    "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm max-w-[85%]",
+                    "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm transition-all hover:shadow-md",
+                    "w-fit max-w-[85%] lg:max-w-[75%]", // w-fit là chìa khóa chống xuống dòng vô lý
                     msg.type === MessageType.USER
-                      ? "bg-[#007AFF] text-white rounded-[1.3rem] rounded-tr-none"
-                      : "bg-[#FFFFFF] border border-gray-200 text-gray-800 rounded-[1.3rem] rounded-tl-none"
+                      ? "bg-[#007AFF] text-white rounded-[1.5rem] rounded-tr-none"
+                      : "bg-white border border-gray-100 text-gray-800 rounded-[1.5rem] rounded-tl-none"
                   )}>
-                    <div className="prose prose-sm max-w-none prose-p:my-0 prose-pre:bg-slate-900 prose-pre:p-0">
-                      <Markdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeHighlight]}
-                      >
+                    <div className={cn(
+                      "prose prose-sm max-w-none prose-p:my-0 break-words whitespace-pre-wrap",
+                      msg.type === MessageType.USER ? "prose-invert" : ""
+                    )}>
+                      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                         {msg.content}
                       </Markdown>
                     </div>
                   </div>
-                  <span className="text-[9px] text-gray-400 font-bold px-2">
+                  <span className="text-[10px] text-gray-400 font-semibold px-2 opacity-70">
                     {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -643,8 +659,8 @@ export default function ChatDetailPage() {
           )}
 
           {isChatting && (
-            <div className="flex gap-3 items-center ml-2">
-              <div className="flex gap-1">
+            <div className="flex gap-3 items-center ml-2 animate-bounce">
+              <div className="flex gap-1.5 bg-gray-100 p-3 rounded-2xl shadow-inner">
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
@@ -657,8 +673,8 @@ export default function ChatDetailPage() {
         <div className="p-4 bg-white border-t border-gray-50">
           <div className="max-w-3xl mx-auto flex items-center gap-2">
             <div className={cn(
-              "flex-1 flex items-end bg-[#F0F2F5] rounded-[2rem] px-5 py-2.5 transition-all border border-transparent",
-              "focus-within:bg-[#E8EAED] focus-within:border-gray-200 shadow-inner"
+              "flex-1 flex items-end bg-[#F0F2F5] rounded-[2rem] px-5 py-2.5 transition-all border border-transparent shadow-inner group",
+              "focus-within:bg-white focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100"
             )}>
               <TextArea
                 value={inputValue}
@@ -669,7 +685,7 @@ export default function ChatDetailPage() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Đặt câu hỏi cho AI..."
+                placeholder="Hỏi trợ lý..."
                 autoSize={{ minRows: 1, maxRows: 10 }}
                 variant="borderless"
                 className="flex-1 text-[15px] py-1 bg-transparent focus:bg-transparent placeholder:text-gray-400"
@@ -677,7 +693,7 @@ export default function ChatDetailPage() {
               />
 
               <div className={cn(
-                "overflow-hidden transition-all duration-300 ease-out flex items-center",
+                "overflow-hidden transition-all duration-300 ease-in-out flex items-center",
                 inputValue.trim() ? "w-10 opacity-100 ml-2" : "w-0 opacity-0"
               )}>
                 <Button
@@ -686,21 +702,27 @@ export default function ChatDetailPage() {
                   icon={<SendOutlined className="!text-white" />}
                   onClick={handleSendMessage}
                   loading={isChatting}
-                  className="!bg-black hover:!bg-gray-600 border-none shadow-md shrink-0 scale-110 transition-all flex items-center justify-center"
+                  className="!bg-black hover:!bg-gray-600 border-none shadow-lg shrink-0 scale-110 active:scale-95 transition-all flex items-center justify-center"
                 />
               </div>
             </div>
           </div>
-          <p className="text-center mt-3 text-[12px] text-gray-400 font-medium">
-            AI có thể mắc sai sót, vui lòng xác thục lại với giảng viên phụ trách!
+          <p className="text-center mt-3 text-[11px] text-gray-400 font-medium italic">
+            AI có thể mắc sai sót, vui lòng xác thực lại thông tin quan trọng!
           </p>
         </div>
       </main>
 
       <style jsx global>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .prose pre { background-color: #f8fafc !important; padding: 12px; border-radius: 8px; }
-      `}</style>
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .custom-scroll::-webkit-scrollbar { width: 4px; }
+      .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+      
+      /* Animation cho tin nhắn mới */
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slide-in-from-bottom-2 { from { transform: translateY(0.5rem); } to { transform: translateY(0); } }
+      .animate-in { animation: fade-in 0.3s ease-out, slide-in-from-bottom-2 0.3s ease-out; }
+    `}</style>
     </div>
   )
 }
