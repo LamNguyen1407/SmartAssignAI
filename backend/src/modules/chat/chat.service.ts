@@ -621,12 +621,9 @@ export class ChatService {
       - Nếu không tìm thấy → gọi getContext
     BẮT BUỘC: Bạn phải gọi một function ngay bây giờ.
     INPUT:
-    Câu hỏi:
-    ${question}
-    Ngữ cảnh:
-    ${chunks}
-    Lịch sử:
-    ${conversationHistory}
+    Câu hỏi: ${question}
+    Ngữ cảnh: ${chunks}
+    Lịch sử: ${conversationHistory}
     courseId: ${courseId}
       `;
     let result = await chat.sendMessage(prompt);
