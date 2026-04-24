@@ -240,7 +240,7 @@ export default function ChatSidebar() {
   return (
     <>
       <div className="flex flex-col h-full bg-transparent text-slate-300">
-        <div className="p-4">
+        <div className="p-4 mt-2">
           <Link href="/chat">
             <button className="w-full group flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 transition-all active:scale-95 shadow-lg">
               <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-300" />

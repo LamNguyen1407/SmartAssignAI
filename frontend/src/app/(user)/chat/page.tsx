@@ -463,15 +463,11 @@ import {
   SendOutlined,
   RobotOutlined,
   UserOutlined,
-  CheckCircleFilled,
-  HistoryOutlined,
-  PlusOutlined,
-  MessageOutlined,
-  MoreOutlined
 } from "@ant-design/icons";
-import { Select, Button, Input, Avatar, Spin, Tooltip } from "antd";
+import { Select, Button, Input, Avatar, Tag } from "antd";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchCourses } from "@/services/course.service";
@@ -488,7 +484,7 @@ export default function ChatPage() {
     {
       id: "1",
       type: MessageType.ASSISTANT,
-      content: "Chào bạn! Tôi có thể giúp gì cho bạn trong việc tìm hiểu khóa học hôm nay?",
+      content: "Bài tập lớn đang làm khó bạn? Đừng lo, chọn môn học phía trên để cùng mình cùng bắt đầu nhé!",
       timestamp: new Date(),
     },
   ]);
@@ -506,6 +502,7 @@ export default function ChatPage() {
     mutationFn: (vars: { question: string; courseId: string }) =>
       ChatWithAI(vars.question, vars.courseId),
     onSuccess: (data) => {
+      // Chuyển hướng sang trang chi tiết session sau khi có phản hồi đầu tiên
       router.push(`/chat/${data.data.chatSessionID}`);
     },
     onError: (err: any) => {
@@ -519,34 +516,39 @@ export default function ChatPage() {
 
   const handleSendMessage = () => {
     if (!selectedCourseId) {
-      toast.warn("Vui lòng chọn khóa học!");
+      toast.warn("Vui lòng chọn khóa học trước khi bắt đầu!");
       return;
     }
     if (!inputValue.trim() || isChatting) return;
+
     setMessages((prev) => [...prev, {
       id: Date.now().toString(),
       type: MessageType.USER,
       content: inputValue,
       timestamp: new Date(),
     }]);
+
     chatMutation({ question: inputValue, courseId: selectedCourseId });
     setInputValue("");
   };
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-[#F0F2F5] p-3 lg:p-5 gap-4">
+    <div className="flex h-[calc(100vh-80px)] bg-[#F0F2F5] p-3 lg:p-5 gap-6">
+      {/* SIDEBAR */}
       <aside className="hidden lg:flex w-72 flex-col bg-[#1E293B] rounded-[2rem] shadow-2xl overflow-hidden border border-slate-700/50 transition-all">
         <ChatSidebar />
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-50 bg-white/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center animate-pulse">
               <RobotOutlined className="text-blue-600" />
             </div>
-            <h2 className="text-sm font-bold text-gray-700 tracking-tight tracking-wide uppercase">AI Academic</h2>
+            <h2 className="text-sm font-bold text-gray-700 tracking-wide uppercase">Trợ lý hỗ trợ bài tập</h2>
           </div>
+
           <Select
             placeholder="Chọn khóa học để hỏi"
             className="w-64 select-modern"
@@ -558,30 +560,44 @@ export default function ChatPage() {
           />
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#FAFAFB] scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6 bg-[#FAFAFB] scrollbar-hide custom-scroll bg-gray-200">
           {messages.map((msg) => (
-            <div key={msg.id} className={cn("flex gap-3", msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row")}>
+            <div
+              key={msg.id}
+              className={cn(
+                "flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                msg.type === MessageType.USER ? "flex-row-reverse" : "flex-row"
+              )}
+            >
               <Avatar
                 size={32}
-                className={cn("mt-1 shrink-0 shadow-sm", msg.type === MessageType.USER ? "bg-slate-800" : "bg-blue-600")}
+                className={cn(
+                  "mt-1 shrink-0 shadow-md",
+                  msg.type === MessageType.USER ? "bg-slate-800" : "bg-blue-600"
+                )}
                 icon={msg.type === MessageType.USER ? <UserOutlined /> : <RobotOutlined />}
               />
-              <div className={cn("flex flex-col gap-1.5", msg.type === MessageType.USER ? "items-end" : "items-start")}>
+              <div className={cn("flex flex-col gap-1.5 w-full", msg.type === MessageType.USER ? "items-end" : "items-start")}>
                 <div className={cn(
-                  "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm max-w-[85%]",
+                  "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm transition-all hover:shadow-md",
+                  "w-fit max-w-[85%] lg:max-w-[75%]", // FIX: Dùng w-fit để chống nhảy dòng vô lý
                   msg.type === MessageType.USER
-                    ? "bg-[#007AFF] text-white rounded-[1.3rem] rounded-tr-none"
-                    : "bg-[#FFFFFF] border border-gray-200 text-gray-800 rounded-[1.3rem] rounded-tl-none"
+                    ? "bg-[#007AFF] text-white rounded-[1.5rem] rounded-tr-none"
+                    : "bg-white border border-gray-100 text-gray-800 rounded-[1.5rem] rounded-tl-none"
                 )}>
-                  <div className="prose prose-sm max-w-none prose-p:my-0 prose-pre:bg-slate-900 prose-pre:p-0">
+                  <div className={cn(
+                    "prose prose-sm max-w-none prose-p:my-0 break-words whitespace-pre-wrap",
+                    msg.type === MessageType.USER ? "prose-invert" : ""
+                  )}>
                     <Markdown
                       remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
                     >
                       {msg.content}
                     </Markdown>
                   </div>
                 </div>
-                <span className="text-[9px] text-gray-400 font-bold px-2">
+                <span className="text-[10px] text-gray-400 font-bold px-2 opacity-70">
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -590,7 +606,7 @@ export default function ChatPage() {
 
           {isChatting && (
             <div className="flex gap-3 items-center ml-2">
-              <div className="flex gap-1">
+              <div className="flex gap-1.5 bg-gray-100 p-3 rounded-2xl shadow-inner animate-pulse">
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                 <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
@@ -600,11 +616,12 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* INPUT AREA */}
         <div className="p-4 bg-white border-t border-gray-50">
           <div className="max-w-3xl mx-auto flex items-center gap-2">
             <div className={cn(
-              "flex-1 flex items-end bg-[#F0F2F5] rounded-[2rem] px-5 py-2.5 transition-all border border-transparent",
-              selectedCourseId && "focus-within:bg-[#E8EAED] focus-within:border-gray-200 shadow-inner"
+              "flex-1 flex items-end bg-[#F0F2F5] rounded-[2rem] px-5 py-2.5 transition-all border border-transparent shadow-inner group",
+              selectedCourseId ? "focus-within:bg-white focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100" : "opacity-60 grayscale"
             )}>
               <TextArea
                 value={inputValue}
@@ -615,7 +632,7 @@ export default function ChatPage() {
                     handleSendMessage();
                   }
                 }}
-                placeholder={selectedCourseId ? "Đặt câu hỏi cho AI..." : "Chọn khóa học phía trên..."}
+                placeholder={selectedCourseId ? "Hỏi trợ lý ..." : "Chọn môn học phía trên để bắt đầu..."}
                 autoSize={{ minRows: 1, maxRows: 10 }}
                 variant="borderless"
                 className="flex-1 text-[15px] py-1 bg-transparent focus:bg-transparent placeholder:text-gray-400"
@@ -632,22 +649,26 @@ export default function ChatPage() {
                   icon={<SendOutlined className="!text-white" />}
                   onClick={handleSendMessage}
                   loading={isChatting}
-                  className="!bg-black hover:!bg-gray-600 border-none shadow-md shrink-0 scale-110 transition-all"
+                  className="!bg-black hover:!bg-gray-600 border-none shadow-lg shrink-0 scale-110 active:scale-95 transition-all flex items-center justify-center"
                 />
               </div>
             </div>
           </div>
-          <p className="text-center mt-3 text-[12px] text-gray-400 font-medium">
-            AI có thể mắc sai sót, vui lòng xác thục lại với giảng viên phụ trách!
+          <p className="text-center mt-3 text-[11px] text-gray-400 font-medium italic">
+            AI có thể mắc sai sót, vui lòng xác thực lại thông tin quan trọng!
           </p>
         </div>
       </main>
 
       <style jsx global>{`
-        .custom-sidebar-scroll::-webkit-scrollbar { width: 3px; }
-        .custom-sidebar-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .select-modern .ant-select-selector { font-weight: 600 !important; color: #475569 !important; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        /* Animation */
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-up { from { transform: translateY(0.5rem); } to { transform: translateY(0); } }
+        .animate-in { animation: fade-in 0.3s ease-out, slide-up 0.3s ease-out; }
       `}</style>
     </div>
   );
