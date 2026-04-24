@@ -11,9 +11,11 @@ import { LoginUser } from "@/services/auth.service";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import Link from "next/link";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function LoginForm() {
   const router = useRouter();
+  const checkAuth = useAuthStore((state) => state.checkAuth);
 
   const { mutate: loginMutation, isPending: isLoginPending } = useMutation({
     mutationFn: async (data: LoginSchema) => {
@@ -21,26 +23,23 @@ export default function LoginForm() {
     },
     onSuccess: (data) => {
       const role = data.data.data.role;
-      toast.success("🎉 Login successfully!");
+      checkAuth();
+      toast.success("Login successfully!");
       if (role === 'admin') {
         router.push('/dashboard');
       } else router.push('/chat')
     },
-    onError: (err: any) => { toast.error(err.response?.data?.message || "❌ Login failed") },
+    onError: (err: any) => { toast.error(err.response?.data?.message || "Login failed") },
   })
-
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
   });
 
-
-
   const onSubmit = async (data: LoginSchema) => {
     // console.log("Submitting login form with data:", data);
     await loginMutation(data);
   };
-
 
   return (
     <Card className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl p-8 border border-gray-100">
@@ -54,7 +53,6 @@ export default function LoginForm() {
       </CardHeader>
       <CardContent>
         <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
-          {/* Username or Email */}
           <div className="space-y-1">
             <Label htmlFor="identifier">Username or Email</Label>
             <Input {...register("identifier")} placeholder="Enter username or email" />
@@ -62,8 +60,6 @@ export default function LoginForm() {
               <p className="text-sm text-red-500">{errors.identifier.message}</p>
             )}
           </div>
-
-          {/* Password */}
           <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
             <Input {...register("password")} type="password" placeholder="Enter password" />
@@ -71,7 +67,6 @@ export default function LoginForm() {
               <p className="text-sm text-red-500">{errors.password.message}</p>
             )}
           </div>
-
           <button
             type="submit"
             disabled={isLoginPending}
