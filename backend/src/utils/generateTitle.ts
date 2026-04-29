@@ -4,7 +4,7 @@ export async function generateTitleFromAI(message: string): Promise<string> {
     const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     try {
         const prompt = `
-            Hãy tạo một tiêu đề ngắn gọn, mô tả (tối đa 6 từ) tóm tắt câu hỏi này.
+            Hãy tạo một tiêu đề ngắn gọn, mô tả (tối đa 6 từ) câu hỏi này.
             Không sử dụng dấu ngoặc kép. Chỉ ghi trực tiếp tiêu đề.
             Câu hỏi: "${message}"
         `;

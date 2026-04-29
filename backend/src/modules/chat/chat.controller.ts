@@ -120,7 +120,7 @@ export class ChatController {
       let question = createQuestion.question
       if (shortTermMess) question = await this.chatService.rewriteQuestion(createQuestion.question, shortTermMess);
       let intent = await this.chatService.classifyQuestion(question, createQuestion.courseId);
-      intent = JSON.parse(intent);
+      console.log(question);
       console.log(intent);
       let hit = null;
       if (intent['intent'] !== 'PROBLEM_SOLVING') hit = await this.chatService.checkCache(question, createQuestion.courseId);

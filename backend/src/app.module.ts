@@ -8,6 +8,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { EmailService } from './modules/email/email.service';
 import { CourseModule } from './modules/course/course.module';
 import { FileModule } from './modules/file/file.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -23,8 +24,9 @@ import { FileModule } from './modules/file/file.module';
     ChatModule,
     CourseModule,
     FileModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService, EmailService],
 })
-export class AppModule {}
+export class AppModule { }
