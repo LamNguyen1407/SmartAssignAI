@@ -90,7 +90,7 @@ export class ChatService {
       },
       {
         $match: {
-          score: { $gte: 0.94 },
+          score: { $gte: 0.95 },
         }
       }
     ]);
@@ -420,56 +420,139 @@ export class ChatService {
     });
     const result = model.choices[0].message.content;
     return result;
+
+    // const model = this.genAI.getGenerativeModel({
+    //   model: 'gemini-2.5-flash-lite',
+    // });
+    // let newPrompt = `
+    //   Bạn là chuyên gia tái tạo truy vấn tìm kiếm. NHIỆM VỤ:
+    //   Dựa vào Tóm tắt hội thoại, biến câu hỏi hiện tại thành một truy vấn độc lập, rõ nghĩa và tối ưu cho việc truy xuất tài liệu.
+    //   QUY TẮC:
+    //   1. Nếu người dùng hỏi:
+    //     - "tiếp theo"
+    //     - "cái tiếp"
+    //     - "bước tiếp"
+    //     → Chỉ thay thế bằng đúng tên nhiệm vụ tiếp theo nếu Tóm tắt xác định rõ số nhiệm vụ đã hoàn thành.
+    //     → Nếu không xác định rõ số → giữ nguyên câu hỏi.
+    //   2. Không được suy đoán số nhiệm vụ nếu Tóm tắt không nói rõ.
+    //   3. Không được thêm ví dụ từ tài liệu (Sherlock, Watson...) trừ khi người dùng nhắc trực tiếp.
+    //   4. Không thêm các cụm như:
+    //     - "hãy cho tôi biết".
+    //     - "giúp tôi".
+    //     - "theo tài liệu".
+    //     - "trong đề bài".
+    //     - Bất kỳ diễn giải dư thừa nào.
+    //   5. Câu hỏi sau khi tái tạo:
+    //     - Phải độc lập.
+    //     - Phải giữ nguyên ý nghĩa người dùng.
+    //     - Gồm các từ khóa quan trọng và tối ưu cho tìm kiếm bằng embedding vector theo cosine.
+    //   6. Nếu không có lịch sử hội thoại → giữ nguyên câu hỏi.
+    //   7. Chỉ trả về duy nhất truy vấn cuối cùng.
+    //     - Không giải thích.
+    //     - Không thêm văn bản khác.
+    //   Tóm tắt hội thoại: ${context}
+    //   Câu hỏi của người dùng: "${question}"
+    // `;
+    // const result = await model.generateContent(newPrompt);
+    // return result.response.text();
   }
 
-  async classifyQuestion(question: string, courseId: string) {
-    const context = await this.getContext(question, courseId);
-    const model = await this.groq.chat.completions.create({
-      messages: [
-        {
-          role: 'system',
-          content: `
-          Bạn là bộ phân loại intent cho hệ thống AI hỗ trợ sinh viên làm bài tập lớn lập trình.
-          - Nhiệm vụ của bạn là phân loại câu hỏi dựa trên:
-          1) Nội dung câu hỏi và ngữ cảnh liên quan được trích xuất từ cơ sở dữ liệu (context)
-          2) Chỉ trả về DUY NHẤT một JSON object theo format:
-          {
-            "intent": "GENERAL" | "INFORMATION" | "PROBLEM_SOLVING",
-            "level": "EASY" | "MEDIUM" | "HARD" | "NULL",
-          }
-          - Định nghĩa intent:
-            + GENERAL: Không liên quan đến bài tập lớn, hoặc không thể xác định được liên quan do thiếu ngữ cảnh.
-            + INFORMATION:
-              * Hỏi khái niệm, giải thích, mô tả
-              * Yêu cầu tóm tắt, liệt kê, trình bày lại nội dung bài tập lớn
-              * Trích xuất thông tin từ tài liệu
-              * Không yêu cầu tính toán cụ thể
-            + PROBLEM_SOLVING: Tính toán số học, tìm giá trị cụ thể, so sánh số, suy luận dựa trên dữ liệu đầu vào.
-          - Định nghĩa level (chỉ áp dụng khi intent = PROBLEM_SOLVING):
-            + EASY: Có thể giải quyết câu hỏi từ 1 nửa (50%) context hiện tại. Không cần phải lấy thêm thông tin từ database.
-            + MEDIUM: Có thể giải quyết câu hỏi từ toàn bộ context hiện tại. Không cần phải lấy thêm thông tin từ database.
-            + HARD: Context hiện tại không đủ để giải quyết cần phải lấy thêm thông tin từ database hoặc cần suy luận phức tạp.
-          - Quy tắc:
-            + Nếu intent khác PROBLEM_SOLVING → level = "NULL".
-            + Nếu không chắc chắn thì level = "MEDIUM".
-            + Không giải thích.
-            + Không thêm văn bản ngoài JSON.
-          `,
+  async classifyQuestion(question: string, courseId: string, retries: number = 3, delay: number = 1000) {
+    // const context = await this.getContext(question, courseId);
+    // const model = await this.groq.chat.completions.create({
+    //   messages: [
+    //     {
+    //       role: 'system',
+    //       content: `
+    //       Bạn là bộ phân loại intent cho hệ thống AI hỗ trợ sinh viên làm bài tập lớn lập trình.
+    //       - Nhiệm vụ của bạn là phân loại câu hỏi dựa trên:
+    //       1) Nội dung câu hỏi và ngữ cảnh liên quan được trích xuất từ cơ sở dữ liệu (context)
+    //       2) Chỉ trả về DUY NHẤT một JSON object theo format:
+    //       {
+    //         "intent": "GENERAL" | "INFORMATION" | "PROBLEM_SOLVING",
+    //         "level": "EASY" | "MEDIUM" | "HARD" | "NULL",
+    //       }
+    //       - Định nghĩa intent:
+    //         + GENERAL: Không liên quan đến bài tập lớn, hoặc không thể xác định được liên quan do thiếu ngữ cảnh.
+    //         + INFORMATION:
+    //           * Hỏi khái niệm, giải thích, mô tả
+    //           * Yêu cầu tóm tắt, liệt kê, trình bày lại nội dung bài tập lớn
+    //           * Trích xuất thông tin từ tài liệu
+    //           * Không yêu cầu tính toán cụ thể
+    //         + PROBLEM_SOLVING: Tính toán số học, tìm giá trị cụ thể, so sánh số, suy luận dựa trên dữ liệu đầu vào.
+    //       - Định nghĩa level (chỉ áp dụng khi intent = PROBLEM_SOLVING):
+    //         + EASY: Có thể giải quyết câu hỏi từ 1 nửa (50%) context hiện tại. Không cần phải lấy thêm thông tin từ database.
+    //         + MEDIUM: Có thể giải quyết câu hỏi từ toàn bộ context hiện tại. Không cần phải lấy thêm thông tin từ database.
+    //         + HARD: Context hiện tại không đủ để giải quyết cần phải lấy thêm thông tin từ database hoặc cần suy luận phức tạp.
+    //       - Quy tắc:
+    //         + Nếu intent khác PROBLEM_SOLVING → level = "NULL".
+    //         + Nếu không chắc chắn thì level = "MEDIUM".
+    //         + Không giải thích.
+    //         + Không thêm văn bản ngoài JSON.
+    //       `,
+    //     },
+    //     {
+    //       role: 'user',
+    //       content: `
+    //       Ngữ cảnh liên quan: ${context}
+    //       Câu hỏi của người dùng: "${question}"
+    //       `,
+    //     },
+    //   ],
+    //   model: 'llama-3.3-70b-versatile',
+    //   response_format: { type: 'json_object' },
+    //   temperature: 0.1,
+    // });
+    // const result = model.choices[0].message.content;
+    // return JSON.parse(result);
+
+    try {
+      const context = await this.getContext(question, courseId);
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash-lite',
+        systemInstruction: `
+        Bạn là bộ phân loại intent cho hệ thống AI hỗ trợ sinh viên làm bài tập lớn lập trình.
+        - GIÁ TRỊ HỢP LỆ CHO 'intent':
+          + GENERAL: Chào hỏi, câu hỏi ngoài lề bài tập lớn.
+          + INFORMATION: Truy xuất thông tin, giải thích khái niệm, tóm tắt, không tính toán.
+          + PROBLEM_SOLVING: Yêu cầu tính toán, suy luận số liệu, so sánh, tìm kết quả cụ thể.
+        - GIÁ TRỊ HỢP LỆ CHO 'level':
+          + NULL: Dùng khi 'intent' là GENERAL hoặc INFORMATION, khi 'intent' là 'PROBLEM_SOLVING' mới thực hiện phân loại.
+          + EASY: Chỉ cần khoảng 1/2 ngữ cảnh (context) hiện tại là giải được.
+          + MEDIUM: Cần toàn bộ ngữ cảnh hiện tại để xử lý. 
+          + HARD: Ngữ cảnh hiện tại không đủ, cần suy luận nhiều bước hoặc gọi hàm lấy thêm dữ liệu.
+        RÀNG BUỘC: 
+          1. Chỉ trả về JSON, không giải thích.
+          2. Giá trị 'intent' và 'level' phải viết HOA và nằm trong danh sách hợp lệ trên.
+        `,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              intent: { type: SchemaType.STRING },
+              level: { type: SchemaType.STRING },
+            },
+            required: ['intent', 'level'],
+          },
+          temperature: 0.1,
         },
-        {
-          role: 'user',
-          content: `
-          Ngữ cảnh liên quan: ${context}
-          Câu hỏi của người dùng: "${question}"
-          `,
-        },
-      ],
-      model: 'llama-3.3-70b-versatile',
-      response_format: { type: 'json_object' },
-      temperature: 0.1,
-    });
-    const result = model.choices[0].message.content;
-    return result;
+      });
+      const prompt = `
+      Ngữ cảnh (Context): ${context}
+      Câu hỏi người dùng: ${question}
+    `;
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+      });
+      return JSON.parse(result.response.text());
+    } catch (error: any) {
+      if (error.status == 503 && retries > 0) {
+        console.warn(`Server lag, đang thử lại sau ${delay}ms...`);
+        await new Promise(res => setTimeout(res, delay));
+        return this.classifyQuestion(question, courseId, retries - 1, delay * 2);
+      }
+    }
   }
 
   async getContext(question, courseId, k: number = 8) {
@@ -625,7 +708,7 @@ export class ChatService {
     Ngữ cảnh: ${chunks}
     Lịch sử: ${conversationHistory}
     courseId: ${courseId}
-      `;
+    `;
     let result = await chat.sendMessage(prompt);
     const maxStep = 2;
     for (let i = 0; i < maxStep; i++) {
@@ -699,7 +782,7 @@ export class ChatService {
     - Kết quả cuối cùng
     4. KHÔNG ĐƯỢC:
     - Không suy đoán thêm công thức ngoài tài liệu
-    - Không cung cấp code
+    - Tuyệt đối không cung cấp code vào câu trả lời cho dù câu hỏi có yêu cầu.
     - Không sử dụng các cụm như “Dựa vào ngữ cảnh”
     5. Nếu tài liệu không cung cấp đủ thông tin để tính toán chính xác → trả lời:
     "Không đủ dữ kiện trong tài liệu để xác định kết quả."
@@ -721,30 +804,40 @@ export class ChatService {
     return await this.callLLM(prompt);
   }
 
-  async callLLM(prompt: string) {
-    console.log('call LLM');
-    const model = this.genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            answer: { type: SchemaType.STRING },
-            summary: { type: SchemaType.STRING },
+  async callLLM(prompt: string, retries: number = 3, delay: number = 1000) {
+    try {
+      console.log('call LLM');
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              answer: { type: SchemaType.STRING },
+              summary: { type: SchemaType.STRING },
+            },
+            required: ['answer', 'summary'],
           },
-          required: ['answer', 'summary'],
         },
-      },
-    });
-    let newPrompt = `
-    ${prompt}
-    PHONG CÁCH NGÔN NGỮ
-    - Xưng hô thân thiện (Ví dụ: mình - bạn, hoặc gọi tên người dùng nếu biết).
-    - Tránh trả lời quá máy móc. Nếu người dùng đang làm sai, hãy nhẹ nhàng chỉ ra điểm nhầm lẫn trước khi đưa ra con số đúng.
+      });
+      let newPrompt = `
+      ${prompt}
+      PHONG CÁCH NGÔN NGỮ:
+      - Xưng hô thân thiện (Ví dụ: mình - bạn, hoặc gọi tên người dùng nếu biết).
+      - Tránh trả lời quá máy móc. Nếu người dùng đang làm sai, hãy nhẹ nhàng chỉ ra điểm nhầm lẫn trước khi đưa ra con số đúng.
     `;
-    const result = await model.generateContent(prompt);
-    return JSON.parse(result.response.text());
+      const result = await model.generateContent(newPrompt);
+      return JSON.parse(result.response.text());
+    } catch (error: any) {
+      if (error.status === 503 && retries > 0) {
+        console.warn(`Server lag, đang thử lại sau ${delay}ms...`);
+        await new Promise(res => setTimeout(res, delay));
+        return this.callLLM(prompt, retries - 1, delay * 2);
+      } else {
+
+      }
+    }
   }
 
   async switchIntent(
