@@ -90,7 +90,7 @@ export class ChatService {
       },
       {
         $match: {
-          score: { $gte: 0.95 },
+          score: { $gte: 0.94 },
         }
       }
     ]);
@@ -564,6 +564,11 @@ export class ChatService {
     return text;
   }
 
+  async getVector(question, courseId, k: number = 8) {
+    const keywordResults = await this.queryKeyword(question, courseId, k);
+    return keywordResults
+  }
+
   async general(question: string, context: string) {
     const conversationHistory =
       context && context.trim() !== ''
@@ -579,8 +584,8 @@ export class ChatService {
     - Không đề cập đến tài liệu nếu câu hỏi không liên quan.
     QUY TẮC BẮT BUỘC:
     1. Trả lời bằng tiếng Việt.
-    2. Trả lời Tối đa 200 từ.
-    3. SUMMARY:
+    2. Trả lời Tối đa 200 từ (biến answer).
+    3. SUMMARY (biến summary):
     - Tóm tắt nội dung chính của câu trả lời, không bao gồm câu hỏi.
     - Tối đa 50 từ.
     --- CÂU HỎI ---
@@ -592,7 +597,7 @@ export class ChatService {
   }
 
   async information(question: string, context: string, courseId: string) {
-    const chunks = await this.getContext(question, courseId, 8);
+    const chunks = await this.getContext(question, courseId, 12);
     const conversationHistory =
       context && context.trim() !== ''
         ? context
@@ -609,10 +614,10 @@ export class ChatService {
     - Trình bày rõ ràng, có cấu trúc nếu cần.
     QUY TẮC BẮT BUỘC:
     1. Trả lời bằng tiếng Việt.
-    2. Trả lời Tối đa 500 từ.
-    3. SUMMARY:
+    2. Trả lời Tối đa 500 từ (biến answer).
+    3. SUMMARY (biến summary):
     - Tóm tắt nội dung chính của câu trả lời, không bao gồm câu hỏi.
-    - Tối đa 100 từ.
+    - Tối đa 200 từ.
     --- NGỮ CẢNH LIÊN QUAN ĐẾN CÂU HỎI ---
     ${chunks}
     --- LỊCH SỬ HỘI THOẠI TRƯỚC ĐÓ ---
@@ -627,6 +632,20 @@ export class ChatService {
     const chunks = await this.getContext(question, courseId);
     const model = this.genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
+      systemInstruction: `
+        Bạn là một hệ thống AI chuyên dụng, chỉ được phép giao tiếp thông qua việc gọi hàm.
+        BẮT BUỘC TUÂN THỦ:
+        1. KHÔNG trả về văn bản thuần túy (string).
+        2. Mỗi lượt phản hồi CHỈ ĐƯỢC gọi đúng 1 hàm.
+        3. Nếu cần thêm thông tin từ cơ sở dữ liệu -> gọi getContext.
+        4. Nếu đã có câu trả lời -> gọi finalAnswer.
+        5. Khi gọi finalAnswer:
+          - answer: trả lời đầy đủ (≤ 500 từ)
+          - PHẢI có dòng: "Kết quả có thể sai sót, vui lòng xác thực lại với giảng viên hoặc người phụ trách."
+          - summary: tóm tắt (≤ 200 từ)
+        6. Tuyệt đối không giải thích, không cung cấp code giải bài.
+        7. Bạn phải gọi một function ngay bây giờ.
+      `,
       tools: [
         {
           functionDeclarations: [
@@ -653,12 +672,12 @@ export class ChatService {
             },
             {
               name: 'finalAnswer',
-              description: 'Trả kết quả cuối cùng',
+              description: 'Gọi hàm này khi muốn đưa về câu trả lời cuối cùng',
               parameters: {
                 type: SchemaType.OBJECT,
                 properties: {
-                  answer: { type: SchemaType.STRING },
-                  summary: { type: SchemaType.STRING },
+                  answer: { type: SchemaType.STRING, description: 'Câu trả lời <= 500 ký tự', },
+                  summary: { type: SchemaType.STRING, description: 'Câu trả lời tóm tắt <= 200 ký tự' },
                 },
                 required: ['answer', 'summary'],
               },
@@ -679,36 +698,31 @@ export class ChatService {
       context && context.trim() !== ''
         ? context
         : 'Không có lịch sử hội thoại trước đó.';
-    let prompt = `
-    Bạn là AI bắt buộc phải sử dụng function để trả lời.
-    Bạn có 2 function:
-    - getContext(question, courseId, k): dùng khi thiếu dữ liệu
-    - finalAnswer(answer, summary): dùng khi đã có đủ dữ liệu
-    QUY TẮC:
-    1. Bạn PHẢI gọi đúng 1 function trong mỗi lần phản hồi:
-      - Thiếu dữ liệu → gọi getContext
-      - Đủ dữ liệu → gọi finalAnswer
-    2. Không bao giờ được:
-      - Trả về text bình thường
-      - Giải thích ngoài function
-      - Gọi nhiều hơn 1 function
-    3. Không được suy đoán:
-      - Nếu thiếu bất kỳ biến, giá trị, hoặc thông tin → phải gọi getContext
-    4. Khi gọi finalAnswer:
-      - answer: trả lời đầy đủ (≤ 500 từ)
-      - PHẢI có dòng:
-        "Kết quả có thể sai sót, vui lòng xác thực lại với giảng viên hoặc người phụ trách."
-      - summary: tóm tắt (≤ 100 từ)
-    5. Ưu tiên:
-      - Sử dụng dữ liệu từ Ngữ cảnh và Lịch sử
-      - Nếu không tìm thấy → gọi getContext
-    BẮT BUỘC: Bạn phải gọi một function ngay bây giờ.
-    INPUT:
-    Câu hỏi: ${question}
-    Ngữ cảnh: ${chunks}
-    Lịch sử: ${conversationHistory}
-    courseId: ${courseId}
-    `;
+    let prompt = `INPUT: CÂU HỎI: ${question}\nNGỮ CẢNH HIỆN TẠI: ${chunks}\nLỊCH SỬ: ${conversationHistory}\ncourseId: ${courseId}`;
+    // Bạn là AI bắt buộc phải sử dụng function để trả lời.
+    // Bạn có 2 function:
+    // - getContext(question, courseId, k): dùng khi thiếu dữ liệu
+    // - finalAnswer(answer, summary): dùng khi đã đưa ra câu trả lời cuối cùng
+    // QUY TẮC:
+    // 1. Bạn PHẢI gọi đúng 1 function trong mỗi lần phản hồi:
+    //   - Thiếu dữ liệu → gọi getContext
+    //   - Đủ dữ liệu → gọi finalAnswer
+    // 2. Không bao giờ được:
+    //   - Trả về text bình thường
+    //   - Giải thích ngoài function
+    //   - Gọi nhiều hơn 1 function
+    //   - Cung cấp code giải bài cho người hỏi
+    // 3. Không được suy đoán:
+    //   - Nếu thiếu bất kỳ biến, giá trị, hoặc thông tin → phải gọi getContext
+    // 4. Khi gọi finalAnswer:
+    //   - answer: trả lời đầy đủ (≤ 500 từ)
+    //   - PHẢI có dòng:
+    //     "Kết quả có thể sai sót, vui lòng xác thực lại với giảng viên hoặc người phụ trách."
+    //   - summary: tóm tắt (≤ 100 từ)
+    // 5. Ưu tiên:
+    //   - Sử dụng dữ liệu từ Ngữ cảnh và Lịch sử
+    //   - Nếu không tìm thấy → gọi getContext
+    // BẮT BUỘC: Bạn phải gọi một function ngay bây giờ.
     let result = await chat.sendMessage(prompt);
     const maxStep = 2;
     for (let i = 0; i < maxStep; i++) {
@@ -787,12 +801,12 @@ export class ChatService {
     5. Nếu tài liệu không cung cấp đủ thông tin để tính toán chính xác → trả lời:
     "Không đủ dữ kiện trong tài liệu để xác định kết quả."
     6. Trả lời bằng tiếng Việt.
-    7. TRẢ LỜI
+    7. TRẢ LỜI (biến answer)
     - Có gợi ý cho câu hỏi tiếp theo.
     - Tối đa 500 từ.
-    8. SUMMARY
+    8. SUMMARY (biến summary)
     - Tóm tắt nội dung chính của câu trả lời.
-    - Tối đa 100 từ.
+    - Tối đa 200 từ.
     ----------------------
     --- NGỮ CẢNH LIÊN QUAN ĐẾN CÂU HỎI ---
     ${chunks}
@@ -809,6 +823,15 @@ export class ChatService {
       console.log('call LLM');
       const model = this.genAI.getGenerativeModel({
         model: 'gemini-2.5-flash',
+        systemInstruction: `
+        BẠN LÀ: Một người bạn cộng sự thông minh, hỗ trợ giải quyết Bài Tập Lớn của trường Đại học Bách Khoa TP. HCM.
+        PHONG CÁCH: 
+        - Thân thiện, xưng hô "mình - bạn". 
+        - Khi người dùng tính toán sai, hãy nhẹ nhàng chỉ ra lỗi (ví dụ: "Hình như bạn nhầm công thức ở bước... rồi nè") trước khi đưa ra đáp án đúng.
+        QUY TẮC ĐỊNH DẠNG:
+        - KHÔNG sử dụng các thẻ HTML (<ul>, <li>, <br>...).
+        - CHỈ sử dụng Markdown (dấu * hoặc - cho danh sách, ** cho chữ đậm).
+      `,
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
@@ -821,13 +844,7 @@ export class ChatService {
           },
         },
       });
-      let newPrompt = `
-      ${prompt}
-      PHONG CÁCH NGÔN NGỮ:
-      - Xưng hô thân thiện (Ví dụ: mình - bạn, hoặc gọi tên người dùng nếu biết).
-      - Tránh trả lời quá máy móc. Nếu người dùng đang làm sai, hãy nhẹ nhàng chỉ ra điểm nhầm lẫn trước khi đưa ra con số đúng.
-    `;
-      const result = await model.generateContent(newPrompt);
+      const result = await model.generateContent(prompt);
       return JSON.parse(result.response.text());
     } catch (error: any) {
       if (error.status === 503 && retries > 0) {

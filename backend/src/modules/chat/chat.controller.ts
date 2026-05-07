@@ -193,6 +193,12 @@ export class ChatController {
     //   10. Tách câu trả lời theo bố cục: Câu trả lời - Giải thích - Kết luận
   }
 
+  @Post('/test-chunk')
+  async testChunk(@Body() body: { courseId: string, question: string, k: number }) {
+    const res = await this.chatService.getVector(body.question, body.courseId, body.k);
+    return res
+  }
+
   @Delete('/deleteChatSession')
   async deleteChatSession(@Body() body: { chatSessionID: string }) {
     const deletedSession = await this.chatService.deleteChatSession(body.chatSessionID);

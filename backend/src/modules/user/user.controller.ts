@@ -1,6 +1,6 @@
 import { Body, Controller } from '@nestjs/common';
 import { UserService } from './user.service';
-import { Get, Post, UseGuards } from '@nestjs/common';
+import { Get, Patch, Post, Delete, Req, UseGuards } from '@nestjs/common';
 import { AuthJwtGuard } from '../guards/jwt.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from 'src/model/schemas/user.schema';
@@ -13,8 +13,10 @@ export class UserController {
   @UseGuards(AuthJwtGuard, RolesGuard)
   @Get('/allUser')
   @Roles(Role.ADMIN)
-  async getAllUser() {
-    const res = await this.userService.getAllUser();
+  async getAllUser(
+    @Req() req: any
+  ) {
+    const res = await this.userService.getAllUser(req.user.userId);
     return res;
   }
 
@@ -24,6 +26,24 @@ export class UserController {
   async updateUser(
     @Body() userSignUpDto: any
   ) {
-    await this.userService.createUser(userSignUpDto);
+    return await this.userService.createUser(userSignUpDto);
+  }
+
+  @UseGuards(AuthJwtGuard, RolesGuard)
+  @Patch('/')
+  @Roles(Role.ADMIN)
+  async editUser(
+    @Body() userEditDto: any
+  ) {
+    return await this.userService.editUser(userEditDto);
+  }
+
+  @UseGuards(AuthJwtGuard, RolesGuard)
+  @Delete('/')
+  @Roles(Role.ADMIN)
+  async deleteUser(
+    @Body() userData: any
+  ) {
+    return await this.userService.deleteUser(userData);
   }
 }
