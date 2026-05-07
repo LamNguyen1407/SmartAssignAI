@@ -28,3 +28,11 @@ export const createCourse = async (data: { id: string, name: string }) => {
   const res = await axiosClient.post('/course', data);
   return res.data;
 }
+
+export const updateCourse = async (data: { _id: string, name: string, id: string }) => {
+  return await axiosClient.patch(`/course/${data._id}`, { name: data.name, id: data.id }).then((res) => res.data);
+}
+
+export const deleteCourse = async (data: { id: string }) => {
+  return await axiosClient.delete(`/course/${data.id}`).then((res) => res.data);
+}

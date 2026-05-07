@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from 'react';
-import { Table, Space, Button, Input, Popconfirm, Modal, Tooltip, Typography, Card, Form } from 'antd';
-import { FileAddOutlined, DeleteOutlined, EyeOutlined, ReadOutlined, PlusOutlined } from '@ant-design/icons';
+import { Table, Button, Input, Modal, Tooltip, Typography, Card, Form } from 'antd';
+import { FileAddOutlined, DeleteOutlined, EditOutlined, ReadOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
 import { getCourseWithFiles, createCourse } from '@/services/course.service';
 import { toast } from 'react-toastify';
 import AddDocumentModal from '@/components/dashboard/course/FormAddFile';
-import { deleteFile } from '@/services/course.service';
+import { deleteFile, deleteCourse } from '@/services/course.service';
 import { useAuthStore } from '@/stores/useAuthStore';
+import EditCourseModal from '@/components/dashboard/course/editCourseModal';
 
 const { Text } = Typography;
 
@@ -19,6 +20,7 @@ const CourseManager = () => {
     const [isOpenAddFile, setOpenAddFile] = useState(false);
     const [record, setRecord] = useState(null);
     const [isAddOpen, setAddOpen] = useState(false);
+    const [isEditOpen, setEditOpen] = useState(false);
     const [form] = Form.useForm();
     const { role } = useAuthStore();
 
@@ -51,9 +53,28 @@ const CourseManager = () => {
         }
     });
 
+    const { mutate: deleteCourseMutation, isPending: deletingCourse } = useMutation({
+        mutationFn: (data: { id: string }) => deleteCourse(data),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['dashboard-get-course-file'] });
+            toast.success("Xóa môn học thành công");
+        },
+        onError: (error: any) => {
+            console.log(error);
+            const serverMessage = error.response?.data?.message;
+            const finalMessage = Array.isArray(serverMessage) ? serverMessage[0] : (serverMessage || error.message || "Có lỗi xảy ra");
+            toast.error(finalMessage);
+        }
+    });
+
     const handleShowOpen = (record: any) => {
         setRecord(record);
         setOpenAddFile(true);
+    }
+
+    const handleEditOpen = (record: any) => {
+        setRecord(record);
+        setEditOpen(true);
     }
 
     const handleSubmit = () => {
@@ -88,6 +109,24 @@ const CourseManager = () => {
         })
     }
 
+    const handleDeleteCourse = (record: any) => {
+        Swal.fire({
+            title: 'Bạn có chắc muốn xóa?',
+            text: 'Bạn có chắc muốn xóa môn học này? Hành động này không thể hoàn tác',
+            icon: 'warning',
+            showCancelButton: true,
+            cancelButtonColor: 'red',
+            cancelButtonText: 'Hủy',
+            confirmButtonColor: 'green',
+            confirmButtonText: 'Xác nhận',
+        }).then((result) => {
+            const confirm = result.isConfirmed;
+            if (confirm) {
+                deleteCourseMutation({ id: record._id });
+            }
+        })
+    }
+
     const columns: ColumnsType<any> = [
         {
             title: 'STT',
@@ -118,9 +157,15 @@ const CourseManager = () => {
             fixed: 'right',
             width: 120,
             render: (_, record) => (
-                <div className="flex w-full items-center justify-center">
+                <div className="flex w-full items-center justify-center gap-2">
                     <Tooltip title="Thêm tài liệu">
-                        <Button icon={<FileAddOutlined />} onClick={() => handleShowOpen(record)} size="small" className='flex items-center justify-center' />
+                        <Button icon={<FileAddOutlined />} onClick={() => handleShowOpen(record)} size="small" className='flex items-center justify-center hover:scale-110' />
+                    </Tooltip>
+                    <Tooltip title="Sửa môn học">
+                        <Button icon={<EditOutlined />} onClick={() => handleEditOpen(record)} size="small" className='flex items-center justify-center hover:scale-110' />
+                    </Tooltip>
+                    <Tooltip title="Xóa môn học">
+                        <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteCourse(record)} size="small" className='flex items-center justify-center hover:scale-110' />
                     </Tooltip>
                 </div>
 
@@ -163,7 +208,7 @@ const CourseManager = () => {
                 render: (_: any, file: any) => (
                     <div className="flex w-full items-center justify-center">
                         <Tooltip title="Xóa tài liệu">
-                            <Button danger size="small" icon={<DeleteOutlined />} onClick={() => handleDeleteFile(file)} />
+                            <Button danger size="small" className="hover:bg-red-50 hover:scale-110" icon={<DeleteOutlined />} onClick={() => handleDeleteFile(file)} />
                         </Tooltip>
                     </div>
                 ),
@@ -199,9 +244,9 @@ const CourseManager = () => {
                     {(role === 'admin') && (<div className="flex gap-2">
                         <Button
                             type="primary"
-                            icon={<PlusOutlined />}
+                            icon={<PlusOutlined className="transition-transform duration-300 group-hover:rotate-90" />}
                             size="large"
-                            className="w-full md:w-auto"
+                            className="w-full md:w-auto group flex items-center justify-center hover:scale-105"
                             onClick={() => { setAddOpen(true) }}
                         >
                             Thêm môn học
@@ -222,6 +267,7 @@ const CourseManager = () => {
                 </Card>
             </div>
             <AddDocumentModal open={isOpenAddFile} onCancel={() => setOpenAddFile(false)} data={record} />
+            <EditCourseModal open={isEditOpen} onCancel={() => setEditOpen(false)} data={record} />
             <Modal
                 open={isAddOpen}
                 title="Thêm mới môn học"

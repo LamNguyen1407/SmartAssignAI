@@ -68,16 +68,16 @@ export class CourseController {
     return await this.courseService.findBySessionId(sessionId);
   }
 
-  @Patch(':id')
+  @Patch('/:id')
   async update(
     @Param('id') id: string,
     @Body() updateCourseDto: UpdateCourseDto,
   ) {
-    return await this.courseService.update(+id, updateCourseDto);
+    return await this.courseService.update(id, updateCourseDto);
   }
 
-  @Delete(':id')
+  @Delete('/:id')
   async remove(@Param('id') id: string) {
-    return await this.courseService.remove(+id);
+    return await this.courseService.remove(id);
   }
 }

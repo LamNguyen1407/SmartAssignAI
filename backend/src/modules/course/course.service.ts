@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { CreateCourseDto } from 'src/model/dtos/course/createCourse.dto';
@@ -6,6 +6,8 @@ import { UpdateCourseDto } from 'src/model/dtos/course/updateCourse.dto';
 import { Course, CourseDocument } from 'src/model/schemas/course.schema';
 import { DocumentFile } from 'src/model/schemas/document.schema';
 import { Metadata, MetadataDocument } from 'src/model/schemas/metadata.schema';
+import { ChatSession, ChatSessionDocument } from "src/model/schemas/chatSession.schema";
+import { Message } from 'src/model/schemas/message.schema';
 
 @Injectable()
 export class CourseService {
@@ -16,6 +18,10 @@ export class CourseService {
     private readonly fileModel: Model<DocumentFile>,
     @InjectModel(Metadata.name)
     private readonly metaModel: Model<MetadataDocument>,
+    @InjectModel(ChatSession.name)
+    private readonly chatSessionModel: Model<ChatSessionDocument>,
+    @InjectModel(Message.name)
+    private readonly messageModel: Model<Message>,
   ) { }
   async create(createCourseDto: CreateCourseDto) {
     const createdCourse = new this.courseModel(createCourseDto);
@@ -34,14 +40,28 @@ export class CourseService {
     return await this.courseModel.find({ sessionId }).exec();
   }
 
-  async update(id: number, updateCourseDto: UpdateCourseDto) {
+  async update(id: string, updateCourseDto: any) {
     return await this.courseModel
       .findByIdAndUpdate(id, updateCourseDto, { new: true })
       .exec();
   }
 
-  async remove(id: number) {
-    return await this.courseModel.findByIdAndDelete(id).exec();
+  async remove(id: string) {
+    const file = await this.fileModel.find({ courseId: id }).exec();
+    if (file.length > 0) {
+      throw new BadRequestException('Môn học này đang có tài liệu');
+    }
+    try {
+      const sessions = await this.chatSessionModel.find({ courseId: id }).select('_id').exec();
+      const sessionIds = sessions.map(s => s._id);
+      return await Promise.all([
+        this.courseModel.findByIdAndDelete(id).exec(),
+        this.chatSessionModel.deleteMany({ courseId: id }).exec(),
+        this.messageModel.deleteMany({ sessionId: { $in: sessionIds } }).exec(),
+      ]);
+    } catch (error: any) {
+      throw new BadRequestException('Lỗi khi xóa môn học: ' + error.message);
+    }
   }
 
   async getCourseWithFiles() {
