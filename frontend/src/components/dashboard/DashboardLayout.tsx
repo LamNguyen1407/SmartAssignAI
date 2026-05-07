@@ -8,7 +8,8 @@ import {
     LogoutOutlined,
     DashboardOutlined,
     RobotOutlined,
-    ReadOutlined
+    ReadOutlined,
+    TeamOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu, Button, Dropdown, Avatar, Space, theme } from 'antd';
 import type { MenuProps } from 'antd';
@@ -81,8 +82,8 @@ export default function SilderLayout({ children }: { children: React.ReactNode }
                     className="!bg-transparent border-none"
                     items={[
                         { key: '/dashboard', icon: <DashboardOutlined />, label: 'Tổng quan' },
-                        ...(role === 'admin' ? [{ key: '/dashboard/user', icon: <ReadOutlined />, label: 'Quản lý người dùng' }] : []),
-                        { key: '/dashboard/course', icon: <ReadOutlined />, label: 'Môn học' },
+                        ...(role === 'admin' ? [{ key: '/dashboard/user', icon: <TeamOutlined />, label: 'Quản lý người dùng' }] : []),
+                        { key: '/dashboard/course', icon: <ReadOutlined />, label: 'Quản lý môn học' },
                     ]}
                 />
             </Sider>
