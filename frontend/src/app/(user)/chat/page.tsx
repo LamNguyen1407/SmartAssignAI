@@ -502,7 +502,6 @@ export default function ChatPage() {
     mutationFn: (vars: { question: string; courseId: string }) =>
       ChatWithAI(vars.question, vars.courseId),
     onSuccess: (data) => {
-      // Chuyển hướng sang trang chi tiết session sau khi có phản hồi đầu tiên
       router.push(`/chat/${data.data.chatSessionID}`);
     },
     onError: (err: any) => {
@@ -534,12 +533,10 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-[calc(100vh-80px)] bg-[#F0F2F5] p-3 lg:p-5 gap-6">
-      {/* SIDEBAR */}
       <aside className="hidden lg:flex w-72 flex-col bg-[#1E293B] rounded-[2rem] shadow-2xl overflow-hidden border border-slate-700/50 transition-all">
         <ChatSidebar />
       </aside>
 
-      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
         <header className="px-6 h-16 flex items-center justify-between border-b border-gray-50 bg-white/50 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
@@ -580,7 +577,7 @@ export default function ChatPage() {
               <div className={cn("flex flex-col gap-1.5 w-full", msg.type === MessageType.USER ? "items-end" : "items-start")}>
                 <div className={cn(
                   "px-5 py-3 text-[14.5px] leading-relaxed shadow-sm transition-all hover:shadow-md",
-                  "w-fit max-w-[85%] lg:max-w-[75%]", // FIX: Dùng w-fit để chống nhảy dòng vô lý
+                  "w-fit max-w-[85%] lg:max-w-[75%]",
                   msg.type === MessageType.USER
                     ? "bg-[#007AFF] text-white rounded-[1.5rem] rounded-tr-none"
                     : "bg-white border border-gray-100 text-gray-800 rounded-[1.5rem] rounded-tl-none"
@@ -616,7 +613,6 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* INPUT AREA */}
         <div className="p-4 bg-white border-t border-gray-50">
           <div className="max-w-3xl mx-auto flex items-center gap-2">
             <div className={cn(
