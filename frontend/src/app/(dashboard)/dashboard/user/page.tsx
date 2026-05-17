@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { Table, Space, Button, Input, Popconfirm, Modal, Tooltip, Typography, Card, Form, Row, Col, Select, DatePicker } from 'antd';
-import { FileAddOutlined, DeleteOutlined, EyeOutlined, TeamOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { Table, Button, Tooltip, Typography, Card, Form } from 'antd';
+import { DeleteOutlined, EyeOutlined, TeamOutlined, PlusOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Swal from 'sweetalert2';
