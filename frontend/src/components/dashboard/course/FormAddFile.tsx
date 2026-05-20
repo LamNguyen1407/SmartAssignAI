@@ -196,7 +196,7 @@ export default function AddDocumentModal({ open, onCancel, data }: { open: boole
                         form={form}
                     >
                         <Form.Item
-                            name="file" // Khớp với key 'file' bạn dùng trong form.getFieldsValue()
+                            name="file"
                             valuePropName="fileList"
                             getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
                             rules={[{ required: true, message: 'Vui lòng chọn file!' }]}
@@ -260,7 +260,8 @@ export default function AddDocumentModal({ open, onCancel, data }: { open: boole
                             Hủy
                         </button>
                         <button
-                            className="px-10 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/30 hover:bg-blue-700 transition-all"
+                            className="px-10 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/30 transition-all
+                            hover:bg-blue-700 disabled:bg-gray-400 disabled:shadow-none disabled:cursor-not-allowed"
                             disabled={uploading}
                             onClick={handleSubmit}
                         >
