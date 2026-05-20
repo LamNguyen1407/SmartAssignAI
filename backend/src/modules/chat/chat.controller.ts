@@ -140,7 +140,12 @@ export class ChatController {
         answer = await this.chatService.switchIntent({ intent: intent['intent'], question, level: intent['level'] }, history, createQuestion.courseId);
         console.log('answer');
         console.log(typeof answer);
-        await this.chatService.addCacheAnswer(createQuestion.courseId, question, answer.answer, answer.summary);
+        if (intent['intent'] !== 'PROBLEM_SOLVING') {
+          const errorMessage = "Hệ thống đang gặp sự cố, vui lòng thử lại sau ít phút hoặc liên hệ với giảng viên phụ trách để được hỗ trợ.";
+          if (answer && answer.answer && !answer.answer.includes(errorMessage)) {
+            await this.chatService.addCacheAnswer(createQuestion.courseId, question, answer.answer, answer.summary);
+          }
+        }
       }
       await this.chatService.createMessage({
         sessionId: chatSessionID,
